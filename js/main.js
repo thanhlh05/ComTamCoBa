@@ -16,7 +16,7 @@ import {
   getServiceState,
 } from './service.js';
 import { handleGrillClick, getGrillSlots, getTray } from './grill.js';
-
+import { initSummaryScreen, showSummaryScreen } from './summary.js';
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -29,7 +29,7 @@ export function showScreen(name) {
   const nextName = ['title', 'prep', 'service', 'summary'].includes(name) ? name : 'title';
 
   Object.entries(screens).forEach(([key, screen]) => {
-    screen.classList.toggle('active', key === nextName);
+    if (screen) screen.classList.toggle('active', key === nextName);
   });
 
   if (nextName === 'prep') {
@@ -37,6 +37,9 @@ export function showScreen(name) {
     renderPrepScreen();
   } else if (nextName === 'service') {
     startService();
+  } else if (nextName === 'summary') {
+    stopServiceLoop();
+    showSummaryScreen();
   } else {
     stopServiceLoop();
   }
@@ -64,6 +67,7 @@ function initializeGame() {
   });
 
   initServiceScreen();
+  initSummaryScreen();
 
   showScreen('title');
 }
@@ -87,6 +91,3 @@ window.__game = {
   getGrillSlots,
   getTray,
 };
-
-
-

@@ -18,6 +18,7 @@ export const initialState = {
   },
   upgrades: {},
   lastSummary: null,
+  loanUsed: false,
 };
 
 let activeState = null;
@@ -175,6 +176,43 @@ export function setLastSummary(summaryData, state = getState()) {
   state.lastSummary = summaryData;
   saveState(state);
   return state.lastSummary;
+}
+
+/**
+ * Tính tiền thuê mặt bằng theo mục 2.
+ */
+export function calcRent(day = 1) {
+  const { base, step, max } = GAME_DATA.currency.rentByDay;
+  return Math.min(max, base + step * (Math.max(1, day) - 1));
+}
+
+/**
+ * Xử lý trừ thuê + vay 1 lần / Game Over.
+ * Trả về { money, rent, loanGiven, gameOver }
+ */
+export function applyRentAndLoan(state = getState()) {
+  const rent = calcRent(state.day || 1);
+  state.money = (Number(state.money) || 0) - rent;
+
+  let loanGiven = false;
+  let gameOver = false;
+
+  // Nếu tiền < 0
+  if (state.money < 0) {
+    const hasStock = Object.values(state.inventory || {}).some((v) => Number(v) > 0);
+    if (!state.loanUsed && !hasStock) {
+      // Cho vay 1 lần
+      state.money += GAME_DATA.currency.loan;
+      state.loanUsed = true;
+      loanGiven = true;
+    } else if (state.money < 0) {
+      // Lần 2 hoặc vẫn âm → Game Over
+      gameOver = true;
+    }
+  }
+
+  saveState(state);
+  return { money: state.money, rent, loanGiven, gameOver };
 }
 
 
