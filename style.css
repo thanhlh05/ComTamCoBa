@@ -1,47 +1,29 @@
 :root {
-  --bg: #fdf3e4;
-  --bg-deep: #f3dfc5;
-  --panel: #fffaf4;
-  --ink: #5a3a22;
-  --ink-soft: #7d5b42;
-  --accent: #f28c28;
-  --accent-dark: #d86e16;
-  --green: #6aa84f;
-  --green-deep: #3d7a2d;
-  --brown: #8a5a35;
-  --danger: #c8553d;
-  --shadow: rgba(90, 58, 34, 0.16);
-  --radius: 22px;
-  --screen-width: 390px;
-  --screen-height: 844px;
+  --bg: #fdf3e4; --bg-deep: #f3dfc5; --panel: #fffaf4;
+  --ink: #5a3a22; --ink-soft: #7d5b42; --accent: #f28c28;
+  --accent-dark: #d86e16; --green: #6aa84f; --green-deep: #3d7a2d;
+  --brown: #8a5a35; --danger: #c8553d; --shadow: rgba(90, 58, 34, 0.16);
+  --radius: 22px; --screen-width: 390px; --screen-height: 844px;
 }
 
 * {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
+  box-sizing: border-box; -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
 }
 
 html, body {
-  margin: 0;
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--ink);
+  margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
   padding: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-right, 0px) + 12px)
     calc(env(safe-area-inset-bottom, 0px) + 12px) calc(env(safe-area-inset-left, 0px) + 12px);
 }
 
 button { font: inherit; }
+
 
 .app-shell {
   width: min(100%, var(--screen-width));
@@ -225,8 +207,81 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
 
 .prep-footer { padding-top: 6px; flex-shrink: 0; }
 
+/* === MÀN BÁN HÀNG (SERVICE SCREEN) === */
+.service-hud { font-size: 0.82rem; }
+.service-toast {
+  background: var(--ink); color: #fff; text-align: center;
+  font-weight: 700; font-size: 0.85rem; padding: 7px 10px;
+  border-radius: 12px; margin: 4px 0 6px; box-shadow: 0 4px 12px var(--shadow);
+}
+.service-toast.hidden { display: none; }
+
+.tray-section {
+  background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(90, 58, 34, 0.12);
+  border-radius: 14px; padding: 6px 10px; margin-bottom: 6px;
+}
+.tray-header { font-size: 0.85rem; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.tray-items { display: flex; flex-wrap: wrap; gap: 4px; min-height: 24px; align-items: center; }
+.tray-empty { font-size: 0.75rem; color: var(--ink-soft); font-style: italic; }
+.tray-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+.tray-badge.good { background: #fef3c7; color: #b45309; }
+.tray-badge.slight-burn { background: #ffedd5; color: #c2410c; }
+
+.grill-section {
+  flex: 1; display: flex; flex-direction: column;
+  background: #231610; border: 2px solid #5a3a22; border-radius: 18px;
+  padding: 8px; box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6); overflow-y: auto;
+}
+.grill-header { text-align: center; margin-bottom: 6px; }
+.grill-header h3 { margin: 0; color: #fdf3e4; font-size: 1rem; }
+.grill-sub { font-size: 0.7rem; color: #d4a373; display: block; margin-top: 1px; }
+
+.grill-grid { display: grid; gap: 8px; flex: 1; align-content: center; }
+.grill-slot {
+  aspect-ratio: 1; min-height: 85px; border-radius: 14px;
+  background: #170d08; border: 2px solid #3d2316; display: flex;
+  align-items: center; justify-content: center; position: relative; cursor: pointer;
+}
+.grill-slot:active { transform: scale(0.96); }
+.grill-slot.empty { border: 2px dashed rgba(242, 140, 40, 0.4); }
+.grill-slot.empty .slot-icon { font-size: 1.4rem; color: var(--accent); }
+.grill-slot.empty .slot-label { font-size: 0.72rem; color: #d4a373; font-weight: 700; }
+
+.slot-ring {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.slot-inner {
+  width: 58px; height: 58px; border-radius: 50%; background: #26160f;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.slot-icon { font-size: 1.3rem; line-height: 1; }
+.slot-label { font-size: 0.65rem; font-weight: 800; color: #fff; margin-top: 1px; text-align: center; }
+
+.smoke-fx {
+  position: absolute; top: -6px; right: -4px; font-size: 1.2rem;
+  animation: smoke-pulse 0.8s infinite alternate;
+}
+@keyframes smoke-pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+
+.grill-slot.shake { animation: slot-shake 0.35s both; }
+@keyframes slot-shake {
+  20%, 80% { transform: translateX(4px); }
+  40%, 60% { transform: translateX(-4px); }
+}
+
+.service-footer { display: flex; gap: 8px; padding-top: 6px; flex-shrink: 0; }
+.secondary-btn {
+  flex: 1; min-height: 48px; border: 1px solid rgba(90, 58, 34, 0.2);
+  border-radius: 16px; background: rgba(255, 255, 255, 0.8);
+  color: var(--ink); font-weight: 700; font-size: 0.95rem; cursor: pointer;
+}
+.secondary-btn:active { transform: scale(0.98); }
+.service-footer .primary-btn { flex: 1; min-height: 48px; }
+
 @media (max-width: 390px) {
   body { padding: 0; }
   .app-shell { width: 100vw; height: 100dvh; border-radius: 0; max-height: 100dvh; }
 }
+
 

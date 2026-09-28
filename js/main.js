@@ -9,6 +9,13 @@ import {
   startNewDay,
 } from './state.js';
 import { initPrepScreen, renderPrepScreen } from './prep.js';
+import {
+  initServiceScreen,
+  startService,
+  stopServiceLoop,
+  getServiceState,
+  handleSlotClick,
+} from './service.js';
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -25,7 +32,12 @@ export function showScreen(name) {
   });
 
   if (nextName === 'prep') {
+    stopServiceLoop();
     renderPrepScreen();
+  } else if (nextName === 'service') {
+    startService();
+  } else {
+    stopServiceLoop();
   }
 }
 
@@ -50,6 +62,8 @@ function initializeGame() {
     onOpenService: () => showScreen('service'),
   });
 
+  initServiceScreen();
+
   showScreen('title');
 }
 
@@ -67,5 +81,8 @@ window.__game = {
   buyUpgrade,
   applyOvernightSpoilage,
   startNewDay,
+  getServiceState,
+  handleSlotClick,
 };
+
 

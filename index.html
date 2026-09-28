@@ -50,17 +50,38 @@
       </div>
 
       <div id="screen-service" class="screen">
-        <div class="topbar">
-          <span>Ngày 1</span>
-          <span>120s</span>
-          <span>⭐ 4.0</span>
+        <header class="topbar service-hud">
+          <span id="service-hud-day">Ngày 1</span>
+          <span id="service-hud-pork">Kho: 0 🍖</span>
+          <span id="service-hud-timer">120s</span>
+          <span id="service-hud-star">⭐ 4.0</span>
+        </header>
+
+        <div id="service-toast" class="service-toast hidden" role="status" aria-live="polite"></div>
+
+        <div class="tray-section">
+          <div class="tray-header">
+            <span>Khay sườn: <strong id="tray-count">0</strong> miếng</span>
+          </div>
+          <div id="tray-items" class="tray-items">
+            <span class="tray-empty">Chưa có sườn chín trong khay</span>
+          </div>
         </div>
-        <h2>Bán hàng</h2>
-        <div class="panel">
-          <p>Screen bán hàng</p>
-          <button class="primary-btn" data-target="summary">Tổng kết</button>
+
+        <div class="grill-section">
+          <div class="grill-header">
+            <h3>🔥 Vỉ nướng than hồng</h3>
+            <span class="grill-sub">Chạm ô trống để nướng, chín thì chạm để gắp</span>
+          </div>
+          <div id="grill-grid" class="grill-grid"></div>
         </div>
+
+        <footer class="service-footer">
+          <button id="btn-service-back" class="secondary-btn" type="button" data-target="prep">⬅ Về chuẩn bị</button>
+          <button class="primary-btn" type="button" data-target="summary">Tổng kết</button>
+        </footer>
       </div>
+
 
       <div id="screen-summary" class="screen">
         <div class="topbar">
