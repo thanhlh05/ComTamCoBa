@@ -15,8 +15,15 @@ let isLoopRunning = false;
 let animationFrameId = null;
 let lastTime = 0;
 let toastTimeout = null;
-let remainingTime = 120, totalCustomers = 10, spawnedCount = 0, spawnTimer = 1.0;
-let customers = [], selectedCustomerId = null, currentPlate = [], dayStats = null;
+let remainingTime = 120;
+let totalCustomers = 10;
+let spawnedCount = 0;
+let spawnTimer = 1.0;
+let customers = [];
+let selectedCustomerId = null;
+let currentPlate = [];
+let dayStats = null;
+let assistantTimer = 0; // Chị Hai
 
 export function showServiceToast(message) {
   const toastEl = document.getElementById('service-toast');
@@ -53,7 +60,10 @@ function spawnCustomer() {
 
   const customer = {
     id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    type, order, maxPatience, patience: maxPatience,
+    type,
+    order,
+    maxPatience,
+    patience: maxPatience,
   };
   customers.push(customer);
   if (!selectedCustomerId) selectedCustomerId = customer.id;
@@ -127,7 +137,6 @@ function trashPlate() {
   showServiceToast('Đã đổ đĩa làm lại! (Mất nguyên liệu)');
 }
 
-
 function deliverPlate() {
   if (customers.length === 0) {
     showServiceToast('Chưa có khách nào!');
@@ -194,6 +203,29 @@ function updateCustomers(dt) {
   }
 }
 
+/** Chị Hai phụ bếp: mỗi 10s tự thêm 1 món (cơm/bì/trứng) vào đĩa đang chọn */
+function updateAssistant(dt) {
+  const state = getState();
+  if (!state.upgrades?.assistant) return;
+  if (!selectedCustomerId || customers.length === 0) return;
+
+  assistantTimer += dt;
+  if (assistantTimer < 10) return;
+  assistantTimer = 0;
+
+  const helpItems = ['com', 'bi', 'trung'].filter((id) => {
+    const stock = Number(state.inventory?.[id]) || 0;
+    const alreadyOnPlate = currentPlate.some((p) => p.id === id);
+    return stock > 0 && !alreadyOnPlate;
+  });
+
+  if (helpItems.length === 0) return;
+
+  const pick = helpItems[Math.floor(Math.random() * helpItems.length)];
+  addIngredientToPlate(pick);
+  showServiceToast(`Chị Hai phụ: thêm ${GAME_DATA.menu[pick]?.name || pick}! 👩‍🍳`);
+}
+
 function gameLoop(now) {
   if (!isLoopRunning) return;
   if (!lastTime) lastTime = now;
@@ -204,6 +236,7 @@ function gameLoop(now) {
   updateHUD();
   updateGrill(dt, showServiceToast);
   updateCustomers(dt);
+  updateAssistant(dt);
 
   if (remainingTime <= 0) {
     finishDay();
@@ -230,19 +263,39 @@ export function startServiceLoop() {
 
 export function stopServiceLoop() {
   isLoopRunning = false;
-  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   lastTime = 0;
 }
-
 
 export function startService() {
   const state = getState();
   remainingTime = GAME_DATA.timing.dayLength || 120;
-  totalCustomers = GAME_DATA.customers.dayCount(state.day || 1);
-  spawnedCount = 0; spawnTimer = 1.0; customers = []; selectedCustomerId = null; currentPlate = [];
+
+  // Bảng hiệu đèn led: khách nhiều hơn ~15%
+  let baseCount = GAME_DATA.customers.dayCount(state.day || 1);
+  if (state.upgrades?.ledSign) {
+    baseCount = Math.min(30, Math.round(baseCount * 1.15));
+  }
+  totalCustomers = baseCount;
+
+  spawnedCount = 0;
+  spawnTimer = 1.0;
+  customers = [];
+  selectedCustomerId = null;
+  currentPlate = [];
+  assistantTimer = 0;
+
   dayStats = {
-    day: state.day || 1, servedCount: 0, leaveCount: 0,
-    revenue: 0, tips: 0, startStar: state.star || 4.0, endStar: state.star || 4.0,
+    day: state.day || 1,
+    servedCount: 0,
+    leaveCount: 0,
+    revenue: 0,
+    tips: 0,
+    startStar: state.star || 4.0,
+    endStar: state.star || 4.0,
   };
 
   const hasUnlock = Boolean(state.upgrades?.unlockMenu);
