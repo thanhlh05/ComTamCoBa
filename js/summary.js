@@ -110,5 +110,6 @@ export function initSummaryScreen() {
 }
 
 export function showSummaryScreen() {
+  console.log('>>> showSummaryScreen được gọi');
   renderSummary();
 }
