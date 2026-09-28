@@ -1,4 +1,14 @@
-import { loadState, getDefaultState } from './state.js';
+import {
+  loadState,
+  getDefaultState,
+  getState,
+  saveState,
+  buyIngredient,
+  buyUpgrade,
+  applyOvernightSpoilage,
+  startNewDay,
+} from './state.js';
+import { initPrepScreen, renderPrepScreen } from './prep.js';
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -13,6 +23,10 @@ export function showScreen(name) {
   Object.entries(screens).forEach(([key, screen]) => {
     screen.classList.toggle('active', key === nextName);
   });
+
+  if (nextName === 'prep') {
+    renderPrepScreen();
+  }
 }
 
 function bindNavigation() {
@@ -29,8 +43,13 @@ function bindNavigation() {
 function initializeGame() {
   const state = loadState();
   if (!state || Object.keys(state).length === 0) {
-    localStorage.setItem('com_tam_save_v1', JSON.stringify(getDefaultState()));
+    saveState(getDefaultState());
   }
+
+  initPrepScreen({
+    onOpenService: () => showScreen('service'),
+  });
+
   showScreen('title');
 }
 
@@ -39,4 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeGame();
 });
 
-window.__game = { showScreen };
+window.__game = {
+  showScreen,
+  getState,
+  loadState,
+  saveState,
+  buyIngredient,
+  buyUpgrade,
+  applyOvernightSpoilage,
+  startNewDay,
+};
+

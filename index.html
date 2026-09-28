@@ -24,16 +24,29 @@
       </div>
 
       <div id="screen-prep" class="screen">
-        <div class="topbar">
-          <span>Ngày 1</span>
-          <span>200.000đ</span>
-          <span>⭐ 4.0</span>
+        <header class="topbar prep-hud">
+          <span id="prep-hud-day">Ngày 1</span>
+          <span id="prep-hud-money">200.000đ</span>
+          <span id="prep-hud-star">⭐ 4.0</span>
+        </header>
+
+        <div class="prep-header">
+          <h2>Chuẩn bị mở quán</h2>
+          <div class="tab-bar" role="tablist" aria-label="Các mục chuẩn bị">
+            <button id="prep-tab-ingredients" class="tab-btn active" role="tab" aria-selected="true" data-tab="ingredients" type="button">
+              🧺 Nguyên liệu
+            </button>
+            <button id="prep-tab-upgrades" class="tab-btn" role="tab" aria-selected="false" data-tab="upgrades" type="button">
+              ⭐ Nâng cấp
+            </button>
+          </div>
         </div>
-        <h2>Chuẩn bị</h2>
-        <div class="panel">
-          <p>Screen chuẩn bị</p>
-          <button class="primary-btn" data-target="service">Mở bán</button>
-        </div>
+
+        <div id="prep-content" class="prep-content-list" role="tabpanel"></div>
+
+        <footer class="prep-footer">
+          <button id="btn-open-service" class="primary-btn" type="button">🔥 Mở bán</button>
+        </footer>
       </div>
 
       <div id="screen-service" class="screen">

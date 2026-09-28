@@ -1,3 +1,5 @@
+import { GAME_DATA } from './data.js';
+
 const STORAGE_KEY = 'com_tam_save_v1';
 
 export const initialState = {
@@ -16,21 +18,27 @@ export const initialState = {
   upgrades: {},
 };
 
+let activeState = null;
+
 export function getDefaultState() {
   return JSON.parse(JSON.stringify(initialState));
 }
 
 export function saveState(state) {
+  activeState = state;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 export function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return getDefaultState();
+  if (!raw) {
+    activeState = getDefaultState();
+    return activeState;
+  }
 
   try {
     const parsed = JSON.parse(raw);
-    return {
+    activeState = {
       ...getDefaultState(),
       ...parsed,
       inventory: {
@@ -39,8 +47,101 @@ export function loadState() {
       },
       upgrades: { ...(parsed.upgrades || {}) },
     };
+    return activeState;
   } catch (error) {
     console.warn('Không tải được save, dùng trạng thái mặc định:', error);
-    return getDefaultState();
+    activeState = getDefaultState();
+    return activeState;
   }
 }
+
+export function getState() {
+  if (!activeState) {
+    activeState = loadState();
+  }
+  return activeState;
+}
+
+/**
+ * Hao hụt tồn kho qua đêm theo mục 3 GAME_DESIGN:
+ * Sườn và chả còn dư mất 50% (làm tròn xuống) nếu chưa mua Tủ lạnh.
+ * Các món khác giữ nguyên.
+ */
+export function applyOvernightSpoilage(state = getState()) {
+  if (!state || !state.inventory) return state;
+
+  // Nếu đã mua tủ lạnh thì sườn và chả không bị hao
+  const hasFridge = Boolean(state.upgrades && state.upgrades.fridge && state.upgrades.fridge > 0);
+  if (!hasFridge) {
+    const spoilageItems = ['suon', 'cha'];
+    spoilageItems.forEach((id) => {
+      const current = Number(state.inventory[id]) || 0;
+      if (current > 0) {
+        const lost = Math.floor(current * 0.5);
+        state.inventory[id] = current - lost;
+      }
+    });
+  }
+
+  return state;
+}
+
+/**
+ * Bắt đầu ngày mới: tăng ngày, áp dụng hao tồn kho qua đêm và lưu game.
+ */
+export function startNewDay(state = getState()) {
+  state.day = (Number(state.day) || 1) + 1;
+  applyOvernightSpoilage(state);
+  saveState(state);
+  return state;
+}
+
+/**
+ * Mua nguyên liệu theo lố (mặc định lố 10 phần).
+ */
+export function buyIngredient(itemId, batchCount = 10, state = getState()) {
+  const item = GAME_DATA.menu[itemId];
+  if (!item) return { success: false, error: 'Món không tồn tại' };
+
+  // Chả và Canh cần mở khóa qua nâng cấp unlockMenu
+  if ((itemId === 'cha' || itemId === 'canh') && !state.upgrades?.unlockMenu) {
+    return { success: false, error: 'Chưa mở khóa nâng cấp' };
+  }
+
+  const cost = item.cost * batchCount;
+  if (state.money < cost) {
+    return { success: false, error: 'Không đủ tiền' };
+  }
+
+  state.money -= cost;
+  state.inventory[itemId] = (Number(state.inventory[itemId]) || 0) + batchCount;
+  saveState(state);
+
+  return { success: true, item, batchCount, cost, state };
+}
+
+/**
+ * Mua nâng cấp theo mục 8.
+ */
+export function buyUpgrade(upgradeId, state = getState()) {
+  const upgrade = GAME_DATA.upgrades[upgradeId];
+  if (!upgrade) return { success: false, error: 'Nâng cấp không tồn tại' };
+
+  const currentLevel = Number(state.upgrades?.[upgradeId]) || 0;
+  if (currentLevel >= upgrade.limit) {
+    return { success: false, error: 'Đã đạt giới hạn tối đa' };
+  }
+
+  const cost = Array.isArray(upgrade.cost) ? upgrade.cost[currentLevel] : upgrade.cost;
+  if (state.money < cost) {
+    return { success: false, error: 'Không đủ tiền' };
+  }
+
+  state.money -= cost;
+  if (!state.upgrades) state.upgrades = {};
+  state.upgrades[upgradeId] = currentLevel + 1;
+  saveState(state);
+
+  return { success: true, upgrade, newLevel: state.upgrades[upgradeId], cost, state };
+}
+
