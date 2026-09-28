@@ -15,8 +15,6 @@ let isLoopRunning = false;
 let animationFrameId = null;
 let lastTime = 0;
 let toastTimeout = null;
-
-let remainingTime = 120;
 let remainingTime = 120, totalCustomers = 10, spawnedCount = 0, spawnTimer = 1.0;
 let customers = [], selectedCustomerId = null, currentPlate = [], dayStats = null;
 
