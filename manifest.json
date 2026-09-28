@@ -1,0 +1,16 @@
+{
+  "name": "Cơm Tấm Cô Ba",
+  "short_name": "Cơm Tấm",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fdf3e4",
+  "theme_color": "#f28c28",
+  "description": "Mô phỏng bán cơm tấm trên điện thoại.",
+  "icons": [
+    {
+      "src": "assets/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
