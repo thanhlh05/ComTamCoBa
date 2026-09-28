@@ -6,6 +6,7 @@ export const initialState = {
   money: 200000,
   day: 1,
   star: 4.0,
+  recentRatings: Array(20).fill(4),
   inventory: {
     com: 0,
     suon: 0,
@@ -16,6 +17,7 @@ export const initialState = {
     tra: 0,
   },
   upgrades: {},
+  lastSummary: null,
 };
 
 let activeState = null;
@@ -41,6 +43,9 @@ export function loadState() {
     activeState = {
       ...getDefaultState(),
       ...parsed,
+      recentRatings: Array.isArray(parsed.recentRatings) && parsed.recentRatings.length > 0
+        ? parsed.recentRatings
+        : Array(20).fill(4),
       inventory: {
         ...getDefaultState().inventory,
         ...(parsed.inventory || {}),
@@ -54,6 +59,7 @@ export function loadState() {
     return activeState;
   }
 }
+
 
 export function getState() {
   if (!activeState) {
@@ -144,4 +150,31 @@ export function buyUpgrade(upgradeId, state = getState()) {
 
   return { success: true, upgrade, newLevel: state.upgrades[upgradeId], cost, state };
 }
+
+/**
+ * Ghi nhận đánh giá sao và cập nhật sao quán (trung bình 20 đánh giá gần nhất).
+ */
+export function recordRating(stars, state = getState()) {
+  if (!state.recentRatings || !Array.isArray(state.recentRatings)) {
+    state.recentRatings = Array(20).fill(4);
+  }
+  state.recentRatings.push(Math.max(1, Math.min(5, Number(stars) || 1)));
+  if (state.recentRatings.length > 20) {
+    state.recentRatings.shift();
+  }
+  const avg = state.recentRatings.reduce((sum, r) => sum + r, 0) / state.recentRatings.length;
+  state.star = Math.round(avg * 10) / 10;
+  saveState(state);
+  return state.star;
+}
+
+/**
+ * Lưu kết quả ngày để màn Tổng kết hiển thị.
+ */
+export function setLastSummary(summaryData, state = getState()) {
+  state.lastSummary = summaryData;
+  saveState(state);
+  return state.lastSummary;
+}
+
 

@@ -1,45 +1,24 @@
-import { getState, saveState } from './state.js';
-import { GAME_DATA } from './data.js';
-import { formatStar } from './ui.js';
+import { getState, saveState, recordRating, setLastSummary } from './state.js';
+import { GAME_DATA, ASSETS } from './data.js';
+import { formatMoney, formatStar } from './ui.js';
+import { scoreOrder } from './scoring.js';
+import {
+  initGrill,
+  updateGrill,
+  handleGrillClick,
+  getGrillSlotCount,
+  popTrayRib,
+  getTray,
+} from './grill.js';
 
-let grillSlots = []; // Danh sách ô nướng: null | { elapsed, progress, stage }
-let tray = []; // Khay chứa sườn chín: { quality, progress }
 let isLoopRunning = false;
 let animationFrameId = null;
 let lastTime = 0;
 let toastTimeout = null;
 
-// Lấy số ô nướng theo nâng cấp (4 -> 6 -> 8)
-export function getGrillSlotCount() {
-  const state = getState();
-  const upgradeLevel = Number(state.upgrades?.grillLarge) || 0;
-  return GAME_DATA.grill.slots + upgradeLevel * 2;
-}
-
-// Lấy thời gian chín và cháy (áp dụng Quạt than nhanh hơn 20%)
-export function getGrillTiming() {
-  const state = getState();
-  const multiplier = state.upgrades?.fanCoal ? 0.8 : 1.0;
-  return {
-    cookDuration: GAME_DATA.grill.cookDuration * multiplier,
-    burnDuration: GAME_DATA.grill.burnDuration * multiplier,
-  };
-}
-
-// Phân loại giai đoạn theo % tiến độ: sống / chín vàng / hơi cháy / cháy đen
-export function getStage(progress) {
-  if (progress <= 59) return 'raw';
-  if (progress <= 90) return 'good';
-  if (progress <= 100) return 'slightBurn';
-  return 'burnt';
-}
-
-function getStageColor(stage) {
-  if (stage === 'raw') return '#ef5350';
-  if (stage === 'good') return '#f59e0b';
-  if (stage === 'slightBurn') return '#b45309';
-  return '#1f2937';
-}
+let remainingTime = 120;
+let remainingTime = 120, totalCustomers = 10, spawnedCount = 0, spawnTimer = 1.0;
+let customers = [], selectedCustomerId = null, currentPlate = [], dayStats = null;
 
 export function showServiceToast(message) {
   const toastEl = document.getElementById('service-toast');
@@ -47,140 +26,174 @@ export function showServiceToast(message) {
   toastEl.textContent = message;
   toastEl.classList.remove('hidden');
   if (toastTimeout) clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toastEl.classList.add('hidden'), 1800);
+  toastTimeout = setTimeout(() => toastEl.classList.add('hidden'), 2000);
 }
 
-export function updateServiceHUD() {
+function updateHUD() {
   const state = getState();
   const dayEl = document.getElementById('service-hud-day');
-  const porkEl = document.getElementById('service-hud-pork');
+  const moneyEl = document.getElementById('service-hud-money');
+  const timerEl = document.getElementById('service-hud-timer');
   const starEl = document.getElementById('service-hud-star');
   if (dayEl) dayEl.textContent = `Ngày ${state.day || 1}`;
-  if (porkEl) porkEl.textContent = `Kho: ${state.inventory?.suon || 0} 🍖`;
+  if (moneyEl) moneyEl.textContent = formatMoney(state.money);
+  if (timerEl) timerEl.textContent = `${Math.max(0, Math.ceil(remainingTime))}s`;
   if (starEl) starEl.textContent = formatStar(state.star || 4.0);
 }
 
-export function renderTray() {
-  const countEl = document.getElementById('tray-count');
-  const itemsEl = document.getElementById('tray-items');
-  if (countEl) countEl.textContent = tray.length;
-  if (!itemsEl) return;
-  if (tray.length === 0) {
-    itemsEl.innerHTML = '<span class="tray-empty">Chưa có sườn chín trong khay</span>';
-  } else {
-    const good = tray.filter((t) => t.quality === 'good').length;
-    const burn = tray.filter((t) => t.quality === 'slightBurn').length;
-    let html = '';
-    if (good > 0) html += `<span class="tray-badge good">🍖 ${good} chín vàng</span>`;
-    if (burn > 0) html += `<span class="tray-badge slight-burn">🍖 ${burn} hơi cháy</span>`;
-    itemsEl.innerHTML = html;
-  }
+function spawnCustomer() {
+  const state = getState();
+  const unlocked = GAME_DATA.customers.types.filter((t) => t.unlockDay <= (state.day || 1));
+  const type = unlocked[Math.floor(Math.random() * unlocked.length)];
+  const availableExtras = ['suon', 'bi', 'trung', 'tra'];
+  if (state.upgrades?.unlockMenu) availableExtras.push('cha', 'canh');
+
+  const extraCount = Math.floor(Math.random() * (type.extraMax - type.extraMin + 1)) + type.extraMin;
+  const shuffled = [...availableExtras].sort(() => 0.5 - Math.random());
+  const order = ['com', ...shuffled.slice(0, extraCount)];
+  const maxPatience = type.patience * (1 + (state.upgrades?.fanMotor ? 0.15 : 0));
+
+  const customer = {
+    id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    type, order, maxPatience, patience: maxPatience,
+  };
+  customers.push(customer);
+  if (!selectedCustomerId) selectedCustomerId = customer.id;
+  renderCustomers();
 }
 
-function renderGrillSlot(index) {
-  const slotEl = document.querySelector(`.grill-slot[data-index="${index}"]`);
-  if (!slotEl) return;
-  const slot = grillSlots[index];
-  const ringEl = slotEl.querySelector('.slot-ring');
-  const iconEl = slotEl.querySelector('.slot-icon');
-  const labelEl = slotEl.querySelector('.slot-label');
-  const smokeEl = slotEl.querySelector('.smoke-fx');
-
-  if (!slot) {
-    slotEl.className = 'grill-slot empty';
-    if (ringEl) ringEl.style.background = 'transparent';
-    if (iconEl) iconEl.textContent = '➕';
-    if (labelEl) labelEl.textContent = 'Đặt sườn';
-    if (smokeEl) smokeEl.classList.add('hidden');
+function renderCustomers() {
+  const rowEl = document.getElementById('customer-row');
+  if (!rowEl) return;
+  if (customers.length === 0) {
+    rowEl.innerHTML = '<span class="queue-empty">Chưa có khách nào đang đợi...</span>';
     return;
   }
-
-  const color = getStageColor(slot.stage);
-  const pct = Math.min(100, Math.round(slot.progress));
-  slotEl.className = `grill-slot cooking ${slot.stage}`;
-  if (ringEl) ringEl.style.background = `conic-gradient(${color} ${pct}%, #3a281e 0%)`;
-  if (iconEl) iconEl.textContent = '🍖';
-  if (labelEl) {
-    if (slot.stage === 'raw') labelEl.textContent = `Sống ${pct}%`;
-    else if (slot.stage === 'good') labelEl.textContent = 'Chín vàng ✨';
-    else if (slot.stage === 'slightBurn') labelEl.textContent = 'Hơi cháy 🔥';
-  }
-  if (smokeEl) smokeEl.classList.toggle('hidden', slot.stage !== 'slightBurn');
+  rowEl.innerHTML = customers.map((c) => {
+    const isSelected = c.id === selectedCustomerId;
+    const pct = Math.max(0, (c.patience / c.maxPatience) * 100);
+    const colorClass = pct > 50 ? 'high' : pct > 20 ? 'med' : 'low';
+    const orderIcons = c.order.map((id) => `<span>${ASSETS[id] || '🍚'}</span>`).join('');
+    return `
+      <div class="customer-card ${isSelected ? 'selected' : ''}" data-id="${c.id}" role="button">
+        <div class="order-bubble">${orderIcons}</div>
+        <div class="customer-avatar">${c.type.icon}</div>
+        <div class="customer-name">${c.type.label}</div>
+        <div class="patience-track"><div class="patience-fill ${colorClass}" style="width: ${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
 }
 
-function shakeSlot(index) {
-  const slotEl = document.querySelector(`.grill-slot[data-index="${index}"]`);
-  if (!slotEl) return;
-  if (navigator.vibrate) {
-    try { navigator.vibrate(50); } catch (_) {}
+function renderPlate() {
+  const itemsEl = document.getElementById('plate-items');
+  if (!itemsEl) return;
+  if (currentPlate.length === 0) {
+    itemsEl.innerHTML = '<span class="plate-empty">Đĩa trống</span>';
+  } else {
+    itemsEl.innerHTML = currentPlate.map((item) => {
+      const icon = ASSETS[item.id] || '🍚';
+      const tag = item.quality === 'slightBurn' ? '<small>🔥</small>' : '';
+      return `<span class="plate-chip">${icon}${tag}</span>`;
+    }).join('');
   }
-  slotEl.classList.remove('shake');
-  void slotEl.offsetWidth;
-  slotEl.classList.add('shake');
-  setTimeout(() => slotEl.classList.remove('shake'), 400);
 }
 
-export function handleSlotClick(index) {
-  const slot = grillSlots[index];
+function addIngredientToPlate(itemId) {
   const state = getState();
-
-  if (!slot) {
-    const currentPork = Number(state.inventory?.suon) || 0;
-    if (currentPork <= 0) {
-      showServiceToast('Hết sườn trong kho rồi!');
-      shakeSlot(index);
+  if (itemId === 'suon') {
+    const rib = popTrayRib();
+    if (!rib) {
+      showServiceToast('Chưa có sườn chín trong khay! Hãy nướng sườn.');
       return;
     }
-    state.inventory.suon = currentPork - 1;
-    saveState(state);
-    updateServiceHUD();
-    grillSlots[index] = { elapsed: 0, progress: 0, stage: 'raw' };
-    renderGrillSlot(index);
+    currentPlate.push({ id: 'suon', quality: rib.quality });
+    renderPlate();
     return;
   }
-
-  if (slot.stage === 'raw') {
-    shakeSlot(index);
-    showServiceToast('Chưa chín!');
+  const stock = Number(state.inventory?.[itemId]) || 0;
+  if (stock <= 0) {
+    showServiceToast(`Hết ${GAME_DATA.menu[itemId]?.name || 'món'} trong kho!`);
     return;
   }
-
-  if (slot.stage === 'good' || slot.stage === 'slightBurn') {
-    const quality = slot.stage;
-    tray.push({ quality, progress: Math.round(slot.progress) });
-    grillSlots[index] = null;
-    renderGrillSlot(index);
-    renderTray();
-    showServiceToast(quality === 'good' ? 'Đã gắp sườn chín vàng! 🍖' : 'Đã gắp sườn hơi cháy! 🍖');
-  }
+  state.inventory[itemId] = stock - 1;
+  saveState(state);
+  currentPlate.push({ id: itemId });
+  renderPlate();
 }
 
-function updateGrill(dt) {
-  const { cookDuration, burnDuration } = getGrillTiming();
+function trashPlate() {
+  if (currentPlate.length === 0) return;
+  currentPlate = [];
+  renderPlate();
+  showServiceToast('Đã đổ đĩa làm lại! (Mất nguyên liệu)');
+}
 
-  grillSlots.forEach((slot, index) => {
-    if (!slot) return;
-    slot.elapsed += dt;
 
-    if (slot.elapsed <= cookDuration) {
-      slot.progress = (slot.elapsed / cookDuration) * 90;
-    } else if (slot.elapsed <= burnDuration) {
-      const burnProgress = (slot.elapsed - cookDuration) / (burnDuration - cookDuration);
-      slot.progress = 90 + burnProgress * 10;
-    } else {
-      slot.progress = 101;
+function deliverPlate() {
+  if (customers.length === 0) {
+    showServiceToast('Chưa có khách nào!');
+    return;
+  }
+  const customer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  if (!customer) return;
+
+  const result = scoreOrder(customer, currentPlate);
+  const state = getState();
+  state.money += result.totalEarned;
+  recordRating(result.stars);
+
+  dayStats.servedCount++;
+  dayStats.revenue += result.baseEarned;
+  dayStats.tips += result.tipEarned;
+
+  customers = customers.filter((c) => c.id !== customer.id);
+  selectedCustomerId = customers[0]?.id || null;
+  currentPlate = [];
+
+  renderPlate();
+  renderCustomers();
+  updateHUD();
+  showServiceToast(`+${formatMoney(result.totalEarned)} (${result.stars}⭐) - ${customer.type.label}!`);
+}
+
+function updateCustomers(dt) {
+  const state = getState();
+  const bonusSignage = state.upgrades?.ledSign ? 0.15 : 0;
+  const gap = GAME_DATA.customers.gapSeconds(state.day || 1, state.star || 4.0, bonusSignage);
+
+  if (spawnedCount < totalCustomers) {
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      if (customers.length < 4) {
+        spawnCustomer();
+        spawnedCount++;
+        spawnTimer = gap;
+      } else {
+        spawnTimer = 0.5;
+      }
     }
+  }
 
-    const newStage = getStage(slot.progress);
-    if (newStage === 'burnt') {
-      grillSlots[index] = null;
-      renderGrillSlot(index);
-      showServiceToast('Trời ơi sườn cháy rồi! 💨');
-    } else {
-      slot.stage = newStage;
-      renderGrillSlot(index);
+  let queueChanged = false;
+  customers = customers.filter((c) => {
+    c.patience -= dt;
+    if (c.patience <= 0) {
+      recordRating(1);
+      dayStats.leaveCount++;
+      queueChanged = true;
+      showServiceToast(`Khách ${c.type.label} hết kiên nhẫn bỏ đi! (-1⭐)`);
+      return false;
     }
+    return true;
   });
+
+  if (queueChanged || customers.length > 0) {
+    if (!customers.find((c) => c.id === selectedCustomerId)) {
+      selectedCustomerId = customers[0]?.id || null;
+    }
+    renderCustomers();
+  }
 }
 
 function gameLoop(now) {
@@ -188,8 +201,26 @@ function gameLoop(now) {
   if (!lastTime) lastTime = now;
   const dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
-  updateGrill(dt);
+
+  remainingTime -= dt;
+  updateHUD();
+  updateGrill(dt, showServiceToast);
+  updateCustomers(dt);
+
+  if (remainingTime <= 0) {
+    finishDay();
+    return;
+  }
   animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+function finishDay() {
+  stopServiceLoop();
+  const state = getState();
+  dayStats.endStar = state.star;
+  setLastSummary(dayStats);
+  showServiceToast('Hết giờ bán hàng! Chuyển sang Tổng kết.');
+  setTimeout(() => window.__game?.showScreen('summary'), 600);
 }
 
 export function startServiceLoop() {
@@ -201,73 +232,66 @@ export function startServiceLoop() {
 
 export function stopServiceLoop() {
   isLoopRunning = false;
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
+  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
   lastTime = 0;
 }
 
-function initGrillDOM(totalSlots) {
-  const gridEl = document.getElementById('grill-grid');
-  if (!gridEl) return;
-  gridEl.innerHTML = '';
-  gridEl.style.gridTemplateColumns = totalSlots > 4 ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)';
-
-  for (let i = 0; i < totalSlots; i++) {
-    const slotDiv = document.createElement('div');
-    slotDiv.className = 'grill-slot empty';
-    slotDiv.dataset.index = String(i);
-    slotDiv.setAttribute('role', 'button');
-    slotDiv.setAttribute('aria-label', `Ô nướng ${i + 1}`);
-    slotDiv.innerHTML = `
-      <div class="slot-ring">
-        <div class="slot-inner">
-          <div class="slot-icon">➕</div>
-          <div class="slot-label">Đặt sườn</div>
-        </div>
-      </div>
-      <div class="smoke-fx hidden" aria-hidden="true">💨</div>
-    `;
-    gridEl.appendChild(slotDiv);
-    renderGrillSlot(i);
-  }
-}
 
 export function startService() {
-  const totalSlots = getGrillSlotCount();
-  if (grillSlots.length !== totalSlots) {
-    grillSlots = Array(totalSlots).fill(null);
-  }
-  updateServiceHUD();
-  initGrillDOM(totalSlots);
-  renderTray();
+  const state = getState();
+  remainingTime = GAME_DATA.timing.dayLength || 120;
+  totalCustomers = GAME_DATA.customers.dayCount(state.day || 1);
+  spawnedCount = 0; spawnTimer = 1.0; customers = []; selectedCustomerId = null; currentPlate = [];
+  dayStats = {
+    day: state.day || 1, servedCount: 0, leaveCount: 0,
+    revenue: 0, tips: 0, startStar: state.star || 4.0, endStar: state.star || 4.0,
+  };
+
+  const hasUnlock = Boolean(state.upgrades?.unlockMenu);
+  document.getElementById('btn-ing-cha')?.classList.toggle('hidden', !hasUnlock);
+  document.getElementById('btn-ing-canh')?.classList.toggle('hidden', !hasUnlock);
+
+  updateHUD();
+  initGrill(getGrillSlotCount());
+  renderPlate();
+  renderCustomers();
   startServiceLoop();
 }
 
 export function initServiceScreen() {
-  const gridEl = document.getElementById('grill-grid');
-  gridEl?.addEventListener('click', (e) => {
+  document.getElementById('customer-row')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.customer-card');
+    if (!card) return;
+    selectedCustomerId = card.dataset.id;
+    renderCustomers();
+  });
+
+  document.getElementById('grill-grid')?.addEventListener('click', (e) => {
     const slotEl = e.target.closest('.grill-slot');
     if (!slotEl) return;
     const index = Number(slotEl.dataset.index);
-    if (!Number.isNaN(index)) handleSlotClick(index);
+    if (!Number.isNaN(index)) {
+      handleGrillClick(index, { onToast: showServiceToast, onHUDUpdate: updateHUD });
+    }
   });
 
-  // Tạm dừng khi ẩn tab
+  document.getElementById('ing-buttons')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-ing]');
+    if (btn) addIngredientToPlate(btn.dataset.ing);
+  });
+
+  document.getElementById('btn-trash-plate')?.addEventListener('click', trashPlate);
+  document.getElementById('btn-deliver-plate')?.addEventListener('click', deliverPlate);
+  document.getElementById('btn-service-summary')?.addEventListener('click', finishDay);
+
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stopServiceLoop();
-    } else {
-      const screenService = document.getElementById('screen-service');
-      if (screenService?.classList.contains('active')) {
-        startServiceLoop();
-      }
+    if (document.hidden) stopServiceLoop();
+    else if (document.getElementById('screen-service')?.classList.contains('active')) {
+      startServiceLoop();
     }
   });
 }
 
 export function getServiceState() {
-  return { grillSlots, tray, isLoopRunning };
+  return { customers, currentPlate, remainingTime, dayStats, isLoopRunning, tray: getTray() };
 }
-

@@ -14,8 +14,9 @@ import {
   startService,
   stopServiceLoop,
   getServiceState,
-  handleSlotClick,
 } from './service.js';
+import { handleGrillClick, getGrillSlots, getTray } from './grill.js';
+
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -82,7 +83,10 @@ window.__game = {
   applyOvernightSpoilage,
   startNewDay,
   getServiceState,
-  handleSlotClick,
+  handleGrillClick,
+  getGrillSlots,
+  getTray,
 };
+
 
 

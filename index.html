@@ -52,35 +52,58 @@
       <div id="screen-service" class="screen">
         <header class="topbar service-hud">
           <span id="service-hud-day">Ngày 1</span>
-          <span id="service-hud-pork">Kho: 0 🍖</span>
+          <span id="service-hud-money">200.000đ</span>
           <span id="service-hud-timer">120s</span>
           <span id="service-hud-star">⭐ 4.0</span>
         </header>
 
         <div id="service-toast" class="service-toast hidden" role="status" aria-live="polite"></div>
 
-        <div class="tray-section">
-          <div class="tray-header">
-            <span>Khay sườn: <strong id="tray-count">0</strong> miếng</span>
-          </div>
-          <div id="tray-items" class="tray-items">
-            <span class="tray-empty">Chưa có sườn chín trong khay</span>
-          </div>
-        </div>
+        <div id="customer-row" class="customer-row" aria-label="Hàng đợi khách"></div>
 
         <div class="grill-section">
           <div class="grill-header">
-            <h3>🔥 Vỉ nướng than hồng</h3>
-            <span class="grill-sub">Chạm ô trống để nướng, chín thì chạm để gắp</span>
+            <h3>🔥 Vỉ nướng</h3>
+            <span class="grill-sub">Chạm ô nướng, chạm sườn chín gắp vào khay</span>
           </div>
           <div id="grill-grid" class="grill-grid"></div>
+          <div class="tray-mini">
+            <span>Khay sườn: <strong id="tray-count">0</strong> miếng</span>
+            <div id="tray-items" class="tray-items">
+              <span class="tray-empty">Chưa có sườn chín</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="plate-section">
+          <div class="plate-info">
+            <span class="plate-title">Đĩa đang làm:</span>
+            <div id="plate-items" class="plate-items">
+              <span class="plate-empty">Đĩa trống</span>
+            </div>
+          </div>
+          <div class="ing-buttons" id="ing-buttons">
+            <button class="ing-btn" data-ing="com" type="button">🍚 Cơm</button>
+            <button class="ing-btn" data-ing="suon" type="button">🍖 Sườn (<span id="tray-btn-count">0</span>)</button>
+            <button class="ing-btn" data-ing="bi" type="button">🥓 Bì</button>
+            <button class="ing-btn" data-ing="trung" type="button">🍳 Trứng</button>
+            <button class="ing-btn" data-ing="tra" type="button">🧊 Trà</button>
+            <button id="btn-ing-cha" class="ing-btn hidden" data-ing="cha" type="button">🥮 Chả</button>
+            <button id="btn-ing-canh" class="ing-btn hidden" data-ing="canh" type="button">🍲 Canh</button>
+          </div>
+        </div>
+
+        <div class="service-actions">
+          <button id="btn-trash-plate" class="danger-btn" type="button">🗑 Đổ đĩa</button>
+          <button id="btn-deliver-plate" class="deliver-btn" type="button">🚀 Giao đĩa</button>
         </div>
 
         <footer class="service-footer">
           <button id="btn-service-back" class="secondary-btn" type="button" data-target="prep">⬅ Về chuẩn bị</button>
-          <button class="primary-btn" type="button" data-target="summary">Tổng kết</button>
+          <button id="btn-service-summary" class="secondary-btn" type="button" data-target="summary">Tổng kết</button>
         </footer>
       </div>
+
 
 
       <div id="screen-summary" class="screen">
