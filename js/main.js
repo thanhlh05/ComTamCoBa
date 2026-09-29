@@ -26,6 +26,7 @@ import { initNav, updateNav } from './nav.js';
 import { initHomeScreen, renderHomeScreen } from './home.js';
 import { initSettingsScreen, renderSettingsScreen } from './settings.js';
 import { initRevenueScreen, renderRevenueScreen } from './revenue.js';
+import { ensurePriceMaps } from './pricing.js';
 // Danh sách màn hình hợp lệ
 const VALID_SCREENS = ['title', 'tutorial', 'home', 'prep', 'service', 'summary', 'revenue', 'settings'];
 
@@ -80,9 +81,14 @@ export function showScreen(name) {
 
 function initializeGame() {
   const state = loadState();
+
   if (!state || Object.keys(state).length === 0) {
     saveState(getDefaultState());
   }
+
+  // Đảm bảo bảng giá luôn tồn tại sau khi load game
+  ensurePriceMaps(getState());
+  saveState(getState());
 
   // Khởi tạo các màn hình
   initTutorial({

@@ -3,6 +3,7 @@ import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import { scoreOrder } from './scoring.js';
 import { pushReview, resolveReviewReason } from './reviews.js';
+import { getPriceFactor } from './pricing.js';
 import {
   initGrill,
   updateGrill,
@@ -181,7 +182,7 @@ function deliverPlate() {
     errors: result.errors,
     isSlightBurn: result.isSlightBurn,
     patiencePct: result.patiencePct,
-    priceTooHigh: false,
+    priceTooHigh: Boolean(result.priceTooHigh),
   });
   pushReview({
     stars: result.stars,
@@ -209,8 +210,14 @@ function deliverPlate() {
 function updateCustomers(dt) {
   const state = getState();
   const bonusSignage = state.upgrades?.ledSign ? 0.15 : 0;
-  // Truyền totalTimeSeconds để gapSeconds chia đều khách theo thời lượng bán thật
-  const gap = GAME_DATA.customers.gapSeconds(state.day || 1, state.star || 4.0, bonusSignage, totalTimeSeconds);
+  const priceFactor = getPriceFactor(state);
+  const gap = GAME_DATA.customers.gapSeconds(
+    state.day || 1,
+    state.star || 4.0,
+    bonusSignage,
+    totalTimeSeconds,
+    priceFactor
+  );
 
   if (spawnedCount < totalCustomers) {
     spawnTimer -= dt;

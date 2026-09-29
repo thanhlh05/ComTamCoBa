@@ -1,6 +1,14 @@
 import { getState, buyIngredient, buyUpgrade, discardIngredient } from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
+import {
+  getPendingPrice,
+  getActivePrice,
+  adjustPendingPrice,
+  getPriceLabel,
+  priceBounds,
+  ensurePriceMaps,
+} from './pricing.js';
 
 let activeTab = 'ingredients';
 let cachedOnOpenService = null;
@@ -14,6 +22,7 @@ let buyQty = 10;
  */
 export function renderPrepScreen() {
   const state = getState();
+  ensurePriceMaps(state);
 
   // 1. Cập nhật HUD: Ngày, Tiền, Sao
   const dayEl = document.getElementById('prep-hud-day');
@@ -63,6 +72,33 @@ function spoilageHint(itemId, stock, state) {
   }
 
   return `<div class="spoil-hint spoil-ok">🟢 Không hao qua đêm</div>`;
+}
+
+function renderPriceRow(itemId, state) {
+  const pending = getPendingPrice(itemId, state);
+  const active = getActivePrice(itemId, state);
+  const { min, max } = priceBounds(itemId);
+  const label = getPriceLabel(itemId, pending);
+  const labelHtml = label
+    ? `<span class="price-label price-${label.kind}">${label.text}</span>`
+    : '';
+  const delayed =
+    pending !== active
+      ? `<span class="price-delayed">Áp dụng ngày bán tiếp theo</span>`
+      : '';
+
+  return `
+    <div class="price-row">
+      <span class="price-row-title">Giá bán</span>
+      <div class="price-controls">
+        <button type="button" class="price-btn" data-action="price-down" data-id="${itemId}" aria-label="Giảm giá">−</button>
+        <span class="price-value">${formatMoney(pending)}</span>
+        <button type="button" class="price-btn" data-action="price-up" data-id="${itemId}" aria-label="Tăng giá">+</button>
+      </div>
+      ${labelHtml}
+      ${delayed}
+      <span class="price-range">Khung ${formatMoney(min)} – ${formatMoney(max)}</span>
+    </div>`;
 }
 
 /**
@@ -201,11 +237,11 @@ function renderIngredientsList(state) {
 
               <div class="card-meta">${metaHtml}</div>
 
-              <div class="card-stock">
-                Tồn kho: <strong>${stock}</strong> phần
-              </div>
-
-              ${spoilHtml}
+                <div class="card-stock">
+                  Tồn kho: <strong>${stock}</strong> phần
+                </div>
+                ${spoilHtml}
+                ${!isLocked ? renderPriceRow(item.id, state) : ''}
             </div>
           </div>
 
@@ -332,6 +368,12 @@ function handleContentClick(event) {
       id,
       Number(button.dataset.stock) || 0
     );
+  } else if (action === 'price-up') {
+    adjustPendingPrice(id, +1);
+    renderPrepScreen();
+  } else if (action === 'price-down') {
+    adjustPendingPrice(id, -1);
+    renderPrepScreen();
   }
 }
 

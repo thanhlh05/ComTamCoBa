@@ -1,4 +1,5 @@
 import { GAME_DATA } from './data.js';
+import { applyPendingPrices, ensurePriceMaps } from './pricing.js';
 
 const STORAGE_KEY = 'com_tam_save_v1';
 
@@ -30,6 +31,9 @@ export const initialState = {
   openHour: 5,
   closeHour: 23,
   dayDurationMinutes: 3,
+  // M16 — giá bán (active = đang bán; pending = chỉnh ở Chuẩn bị, áp dụng ngày sau)
+  menuPrices: {},
+  pendingMenuPrices: {},
 };
 
 let activeState = null;
@@ -73,6 +77,8 @@ export function loadState() {
         5: Number(parsed.starCounts?.[5]) || 0,
       },
       reviews: Array.isArray(parsed.reviews) ? parsed.reviews.slice(0, 30) : [],
+      menuPrices: { ...(parsed.menuPrices || {}) },
+      pendingMenuPrices: { ...(parsed.pendingMenuPrices || {}) },
     };
     return activeState;
   } catch (error) {
@@ -119,6 +125,7 @@ export function applyOvernightSpoilage(state = getState()) {
 export function startNewDay(state = getState()) {
   state.day = (Number(state.day) || 1) + 1;
   applyOvernightSpoilage(state);
+  // Giá pending → active do summary.js gọi applyPendingPrices trước/sau
   saveState(state);
   return state;
 }

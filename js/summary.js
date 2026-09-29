@@ -7,6 +7,7 @@ import {
   pushRevenueRecord,
 } from './state.js';
 import { formatMoney, formatStar } from './ui.js';
+import { applyPendingPrices, ensurePriceMaps } from './pricing.js';
 
 let summaryBound = false;
 
@@ -114,7 +115,9 @@ function renderSummary() {
 
   document.getElementById('btn-next-day')?.addEventListener('click', () => {
     const s = getState();
-    delete s._rentAppliedForDay; // reset cờ cho ngày mới
+    delete s._rentAppliedForDay;
+    ensurePriceMaps(s);
+    applyPendingPrices(s); // pending → active trước khi sang ngày mới
     startNewDay(s);
     window.__game?.showScreen('home');
   });

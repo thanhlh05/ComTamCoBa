@@ -24,9 +24,11 @@ export const GAME_DATA = {
       { id: 'du_lich', label: 'Khách du lịch', icon: '📷', patience: 35, extraMin: 2, extraMax: 4, tip: 0.25, unlockDay: 4 },
       { id: 'shipper', label: 'Shipper', icon: '📦', patience: 20, extraMin: 1, extraMax: 2, tip: 0.3, unlockDay: 6 },
     ],
-    gapSeconds(day, star, bonusSignage = 0, dayLengthSeconds = 180) {
+    gapSeconds(day, star, bonusSignage = 0, dayLengthSeconds = 180, priceFactor = 1) {
       const count = this.dayCount(day);
-      return (dayLengthSeconds / count) * (1.4 - 0.1 * star) / (1 + bonusSignage);
+      const factor = Math.max(0.6, Math.min(1.3, Number(priceFactor) || 1));
+      // heSoGia > 1 → khách đông hơn → khoảng cách nhỏ hơn
+      return ((dayLengthSeconds / count) * (1.4 - 0.1 * star) / (1 + bonusSignage)) / factor;
     },
   },
   star: {
