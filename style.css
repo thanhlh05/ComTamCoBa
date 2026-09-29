@@ -988,3 +988,78 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
   min-width: 48px;
   text-align: center;
 }
+
+/* === ID SAO LƯU (M8) === */
+.backup-code-box {
+  background: rgba(90, 58, 34, 0.06);
+  border: 1px solid rgba(90, 58, 34, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  max-height: 88px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.backup-code-text {
+  display: block;
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--ink);
+  word-break: break-all;
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.settings-secondary-btn {
+  width: 100%;
+  min-height: 44px;
+  border: 2px solid rgba(242, 140, 40, 0.4);
+  border-radius: 12px;
+  background: rgba(242, 140, 40, 0.1);
+  color: var(--accent-dark);
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+.settings-secondary-btn:active {
+  background: rgba(242, 140, 40, 0.2);
+  transform: scale(0.98);
+}
+
+.backup-import-input {
+  width: 100%;
+  min-height: 72px;
+  border: 2px solid rgba(90, 58, 34, 0.15);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: var(--ink);
+  resize: vertical;
+  margin-bottom: 10px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.backup-import-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.15);
+}
+
+.backup-status {
+  color: var(--green-deep) !important;
+  min-height: 1.2em;
+}
+
+.settings-error {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+.settings-error.hidden { display: none; }

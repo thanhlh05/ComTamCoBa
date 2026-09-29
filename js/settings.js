@@ -81,6 +81,28 @@ export function renderSettingsScreen() {
       </div>
     </div>
 
+    <!-- ID sao lưu -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">💾 ID sao lưu</h3>
+      <p class="settings-note">Lưu mã này lại để khôi phục trên máy khác.</p>
+      <div class="backup-code-box">
+        <code id="backup-code-text" class="backup-code-text">${getBackupCode()}</code>
+      </div>
+      <button id="settings-copy-backup" class="settings-secondary-btn" type="button">
+        📋 Sao chép
+      </button>
+      <p id="backup-copy-status" class="settings-note backup-status"></p>
+
+      <h3 class="settings-section-title" style="margin-top:14px">📥 Nhập ID sao lưu</h3>
+      <textarea id="backup-import-input" class="backup-import-input" rows="3"
+        placeholder="Dán mã sao lưu vào đây..." autocomplete="off"></textarea>
+      <button id="settings-restore-backup" class="settings-secondary-btn" type="button">
+        ♻️ Khôi phục
+      </button>
+      <p id="backup-import-error" class="settings-error hidden"></p>
+    </div>
+
+
     <!-- Chơi lại từ đầu -->
     <div class="settings-section">
       <h3 class="settings-section-title">⚠️ Nguy hiểm</h3>
@@ -103,7 +125,6 @@ function bindSettingsEvents() {
     const state = getState();
     state.soundEnabled = !state.soundEnabled;
     saveState(state);
-    // Re-render chỉ toggle button
     const btn = document.getElementById('settings-sound-toggle');
     if (btn) {
       btn.classList.toggle('on', state.soundEnabled);
@@ -129,7 +150,6 @@ function bindSettingsEvents() {
     const state = getState();
     state.dayDurationMinutes = minutes;
     saveState(state);
-    // Cập nhật UI
     document.querySelectorAll('.duration-btn').forEach(b => {
       b.classList.toggle('active', Number(b.dataset.minutes) === minutes);
     });
@@ -137,6 +157,36 @@ function bindSettingsEvents() {
 
   // Chơi lại
   document.getElementById('settings-reset-btn')?.addEventListener('click', confirmReset);
+
+  // Sao chép ID
+  document.getElementById('settings-copy-backup')?.addEventListener('click', copyBackupCode);
+
+  // Khôi phục
+  document.getElementById('settings-restore-backup')?.addEventListener('click', () => {
+    const input = document.getElementById('backup-import-input');
+    const code = (input?.value || '').trim();
+    const errEl = document.getElementById('backup-import-error');
+    if (errEl) {
+      errEl.textContent = '';
+      errEl.classList.add('hidden');
+    }
+    if (!code) {
+      if (errEl) {
+        errEl.textContent = 'Chưa nhập mã sao lưu.';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+    if (!isValidBackupCode(code)) {
+      if (errEl) {
+        errEl.textContent = 'Mã không hợp lệ. Kiểm tra lại rồi thử lại.';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+    const dialog = document.getElementById('settings-restore-dialog');
+    if (dialog) dialog.classList.remove('hidden');
+  });
 }
 
 /** Điều chỉnh giờ mở hoặc đóng, áp đặt ràng buộc */
@@ -201,18 +251,94 @@ function confirmReset() {
   if (overlay) overlay.classList.remove('hidden');
 }
 
+/** Lấy chuỗi base64 của save hiện tại */
+function getBackupCode() {
+  try {
+    const raw = localStorage.getItem('com_tam_save_v1') || '';
+    if (!raw) return '(chưa có dữ liệu lưu)';
+    return btoa(unescape(encodeURIComponent(raw)));
+  } catch {
+    return '(lỗi tạo mã)';
+  }
+}
+
+/** Kiểm tra mã có giải mã được và là JSON hợp lệ không */
+function isValidBackupCode(code) {
+  try {
+    const json = decodeURIComponent(escape(atob(code.trim())));
+    const data = JSON.parse(json);
+    return data && typeof data === 'object' && ('money' in data || 'day' in data);
+  } catch {
+    return false;
+  }
+}
+
+function copyBackupCode() {
+  const text = document.getElementById('backup-code-text')?.textContent || '';
+  const status = document.getElementById('backup-copy-status');
+  if (!text || text.startsWith('(')) {
+    if (status) status.textContent = 'Không có mã để sao chép.';
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    if (status) status.textContent = '✓ Đã sao chép!';
+    setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+  }).catch(() => {
+    // Fallback cho trình duyệt cũ
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      if (status) status.textContent = '✓ Đã sao chép!';
+    } catch {
+      if (status) status.textContent = 'Không sao chép được. Hãy chọn và copy thủ công.';
+    }
+    document.body.removeChild(ta);
+    setTimeout(() => { if (status) status.textContent = ''; }, 2500);
+  });
+}
+
+function applyRestore() {
+  const input = document.getElementById('backup-import-input');
+  const code = (input?.value || '').trim();
+  const errEl = document.getElementById('backup-import-error');
+  try {
+    const json = decodeURIComponent(escape(atob(code)));
+    const data = JSON.parse(json);
+    if (!data || typeof data !== 'object') throw new Error('invalid');
+    localStorage.setItem('com_tam_save_v1', json);
+    document.getElementById('settings-restore-dialog')?.classList.add('hidden');
+    location.reload();
+  } catch {
+    document.getElementById('settings-restore-dialog')?.classList.add('hidden');
+    if (errEl) {
+      errEl.textContent = 'Mã không hợp lệ. Save hiện tại không bị thay đổi.';
+      errEl.classList.remove('hidden');
+    }
+  }
+}
+
 export function initSettingsScreen() {
   if (settingsBound) return;
   settingsBound = true;
 
-  // Xử lý dialog confirm reset
+  // Dialog chơi lại từ đầu
   document.getElementById('settings-reset-confirm')?.addEventListener('click', () => {
     localStorage.removeItem('com_tam_save_v1');
     document.getElementById('settings-reset-dialog')?.classList.add('hidden');
-    // Xóa state trong memory rồi reload → main sẽ đưa vào màn Đặt tên quán
     location.reload();
   });
   document.getElementById('settings-reset-cancel')?.addEventListener('click', () => {
     document.getElementById('settings-reset-dialog')?.classList.add('hidden');
+  });
+
+  // Dialog xác nhận khôi phục
+  document.getElementById('settings-restore-confirm')?.addEventListener('click', applyRestore);
+  document.getElementById('settings-restore-cancel')?.addEventListener('click', () => {
+    document.getElementById('settings-restore-dialog')?.classList.add('hidden');
   });
 }
