@@ -24,9 +24,9 @@ export const GAME_DATA = {
       { id: 'du_lich', label: 'Khách du lịch', icon: '📷', patience: 35, extraMin: 2, extraMax: 4, tip: 0.25, unlockDay: 4 },
       { id: 'shipper', label: 'Shipper', icon: '📦', patience: 20, extraMin: 1, extraMax: 2, tip: 0.3, unlockDay: 6 },
     ],
-    gapSeconds(day, star, bonusSignage = 0) {
+    gapSeconds(day, star, bonusSignage = 0, dayLengthSeconds = 180) {
       const count = this.dayCount(day);
-      return (120 / count) * (1.4 - 0.1 * star) / (1 + bonusSignage);
+      return (dayLengthSeconds / count) * (1.4 - 0.1 * star) / (1 + bonusSignage);
     },
   },
   star: {
@@ -65,7 +65,13 @@ export const GAME_DATA = {
     },
   },
   timing: {
-    dayLength: 120,
+    dayLength: 180,       // mặc định 3 phút = 180 giây
+    openHour: 5,          // giờ mở quán mặc định
+    closeHour: 23,        // giờ đóng quán mặc định
+    dayDurationMinutes: 3,// 3/4/5/6 phút — thay đổi trong Cài đặt
+    minHour: 5,           // khung giờ tối thiểu
+    maxHour: 23,          // khung giờ tối đa
+    durationOptions: [3, 4, 5, 6],
     saveAfterPurchase: true,
     saveAfterSummary: true,
   },

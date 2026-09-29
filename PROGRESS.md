@@ -57,3 +57,21 @@
   - CSS: overlay tối với z-index 1000, menu card ở giữa, confirm dialog ở z-index 1001.
 - **File thay đổi**: `js/pausemenu.js` (tạo mới), `index.html`, `js/service.js`, `js/state.js`, `js/main.js`, `style.css`.
 
+## Mốc 6B — Tutorial + Nav + Home (js/tutorial.js, js/nav.js, js/home.js)
+- **Đã làm**:
+  - `js/tutorial.js`: màn Đặt tên quán hiện lần đầu sau khi bấm "Chạm để vào". Ô nhập tối đa 20 ký tự, không để trống, placeholder "Cơm Tấm Cô Ba". Lưu `state.shopName` + `state.tutorialDone=true`. Người chơi cũ (có save) bỏ qua.
+  - `js/nav.js`: bottom nav 4 tab (🏠 Quán, 🍚 Chuẩn bị, 📊 Doanh thu, ⚙️ Cài đặt). Ẩn hoàn toàn khi service/title/tutorial. Hiển thị và đánh dấu tab active theo màn hiện tại.
+  - `js/home.js`: tab Quán dashboard với banner tên quán (gradient cam), thẻ sao + ngày + tiền, nút "Mở bán" → Chuẩn bị.
+  - `index.html`: thêm screen-tutorial, screen-home, screen-revenue, screen-settings, bottom-nav. Giữ nguyên mọi màn cũ.
+  - `js/main.js`: tích hợp tutorial/nav/home. Start button kiểm tra `needsTutorial()`. `showScreen()` dùng lazy DOM lookup. Màn summary "Qua ngày mới" → home.
+  - `js/state.js`: thêm `shopName` và `tutorialDone` vào `initialState`.
+  - `js/summary.js`: sau "Qua ngày mới" gọi `showScreen('home')` thay vì 'prep'.
+  - `style.css`: CSS cho tutorial, home dashboard, placeholder screens, bottom nav với safe-area-inset.
+- **Nghiệm thu**:
+  - [x] Lần đầu: bấm "Chạm để vào" → màn Đặt tên quán → nhập tên → hiện tab Quán với tên đúng.
+  - [x] Người chơi cũ: bấm "Chạm để vào" → thẳng tab Quán.
+  - [x] Chuyển được giữa 4 tab bằng bottom nav.
+  - [x] Bottom nav biến mất khi vào Bán hàng, hiện lại sau Tổng kết.
+  - [x] Nút "Mở bán" ở tab Quán → Chuẩn bị (không bỏ qua bước mua nguyên liệu).
+- **File thay đổi**: `js/tutorial.js` (mới), `js/nav.js` (mới), `js/home.js` (mới), `index.html`, `js/main.js`, `js/state.js`, `js/summary.js`, `style.css`, `PROGRESS.md`.
+- **Bước tiếp theo**: Mốc 7 (tab Doanh thu), Mốc 8 (tab Cài đặt).

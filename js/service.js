@@ -15,7 +15,8 @@ let isLoopRunning = false;
 let animationFrameId = null;
 let lastTime = 0;
 let toastTimeout = null;
-let remainingTime = 120;
+let remainingTime = 120;     // giây thật còn lại
+let totalTimeSeconds = 180;  // tổng giây thật của phiên bán
 let totalCustomers = 10;
 let spawnedCount = 0;
 let spawnTimer = 1.0;
@@ -24,6 +25,14 @@ let selectedCustomerId = null;
 let currentPlate = [];
 let dayStats = null;
 let assistantTimer = 0; // Chị Hai
+
+// Đồng hồ giờ ảo (mục 15)
+let virtualMinutes = 0;    // phút ảo hiện tại (tính từ giờ mở)
+let openHour = 5;          // giờ mở (lấy từ state khi startService)
+let totalGameMinutes = 0;  // (closeHour - openHour) * 60
+let minsPerSecond = 0;     // số phút ảo tăng mỗi giây thật
+let lastClockUpdate = 0;   // nhị bất cập nhật đồng hồ mỗi ~0.5s
+
 
 export function showServiceToast(message) {
   const toastEl = document.getElementById('service-toast');
@@ -42,8 +51,24 @@ function updateHUD() {
   const starEl = document.getElementById('service-hud-star');
   if (dayEl) dayEl.textContent = `Ngày ${state.day || 1}`;
   if (moneyEl) moneyEl.textContent = formatMoney(state.money);
-  if (timerEl) timerEl.textContent = `${Math.max(0, Math.ceil(remainingTime))}s`;
   if (starEl) starEl.textContent = formatStar(state.star || 4.0);
+
+  // Hiển thị đồng hồ giờ ảo (chỉ là hiển thị, không ảnh hưởng spawn/nướng)
+  if (timerEl) {
+    const currentGameMins = Math.floor(virtualMinutes);
+    const displayHour = openHour + Math.floor(currentGameMins / 60);
+    const displayMin = currentGameMins % 60;
+    timerEl.textContent = `${String(displayHour).padStart(2,'0')}:${String(displayMin).padStart(2,'0')}`;
+  }
+
+  // Cập nhật thanh tiến trình
+  const bar = document.getElementById('service-progress-bar');
+  if (bar) {
+    const pct = totalTimeSeconds > 0
+      ? Math.max(0, (remainingTime / totalTimeSeconds) * 100)
+      : 0;
+    bar.style.width = `${pct}%`;
+  }
 }
 
 function spawnCustomer() {
@@ -167,7 +192,8 @@ function deliverPlate() {
 function updateCustomers(dt) {
   const state = getState();
   const bonusSignage = state.upgrades?.ledSign ? 0.15 : 0;
-  const gap = GAME_DATA.customers.gapSeconds(state.day || 1, state.star || 4.0, bonusSignage);
+  // Truyền totalTimeSeconds để gapSeconds chia đều khách theo thời lượng bán thật
+  const gap = GAME_DATA.customers.gapSeconds(state.day || 1, state.star || 4.0, bonusSignage, totalTimeSeconds);
 
   if (spawnedCount < totalCustomers) {
     spawnTimer -= dt;
@@ -233,7 +259,15 @@ function gameLoop(now) {
   lastTime = now;
 
   remainingTime -= dt;
-  updateHUD();
+
+  // Cập nhật đồng hồ giờ ảo (chỉ hiển thị, mỗi ~0.5s thật)
+  virtualMinutes += minsPerSecond * dt;
+  lastClockUpdate += dt;
+  if (lastClockUpdate >= 0.5) {
+    lastClockUpdate = 0;
+    updateHUD();
+  }
+
   updateGrill(dt, showServiceToast);
   updateCustomers(dt);
   updateAssistant(dt);
@@ -273,10 +307,21 @@ export function stopServiceLoop() {
 export function startService() {
   const state = getState();
   
-  // Lưu backup trần tái trước khi bán (dùng để rollback nếu người chơi thoát sớm)
+  // Lưu backup trước khi bán (dùng để rollback nếu người chơi thoát sớm)
   backupDayBeforeService(state);
-  
-  remainingTime = GAME_DATA.timing.dayLength || 120;
+
+  // Tính thời lượng thật từ cài đặt
+  const durMins = Number(state.dayDurationMinutes ?? 3);
+  totalTimeSeconds = durMins * 60;   // 3ph=180s, 4ph=240s...
+  remainingTime = totalTimeSeconds;
+
+  // Khởi tạo đồng hồ giờ ảo
+  openHour = Number(state.openHour ?? 5);
+  const closeHour = Number(state.closeHour ?? 23);
+  totalGameMinutes = (closeHour - openHour) * 60;  // tổng phút trong game
+  minsPerSecond = totalGameMinutes / totalTimeSeconds; // phút ảo / giây thật
+  virtualMinutes = 0;
+  lastClockUpdate = 0;
 
   // Bảng hiệu đèn led: khách nhiều hơn ~15%
   let baseCount = GAME_DATA.customers.dayCount(state.day || 1);

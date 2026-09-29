@@ -14,6 +14,8 @@
   </head>
   <body>
     <div id="app" class="app-shell" role="application" aria-live="polite">
+
+      <!-- ===== MÀN TITLE (START) ===== -->
       <div id="screen-title" class="screen active">
         <div class="title-card">
           <div class="logo">🍚</div>
@@ -23,6 +25,66 @@
         </div>
       </div>
 
+      <!-- ===== MÀN ĐẶT TÊN QUÁN (TUTORIAL) ===== -->
+      <div id="screen-tutorial" class="screen">
+        <div class="tutorial-wrap">
+          <div class="tutorial-logo">🏪</div>
+          <h2 class="tutorial-title">Đặt tên quán</h2>
+          <p class="tutorial-sub">Cô Ba muốn biết quán của bạn tên gì nè!</p>
+          <form id="tutorial-name-form" class="tutorial-form" autocomplete="off">
+            <div class="tutorial-input-wrap">
+              <input
+                id="tutorial-shop-input"
+                class="tutorial-input"
+                type="text"
+                maxlength="20"
+                placeholder="Cơm Tấm Cô Ba"
+                aria-label="Tên quán"
+                inputmode="text"
+                enterkeyhint="done"
+              />
+              <span id="tutorial-name-counter" class="tutorial-counter">0/20</span>
+            </div>
+            <button
+              id="tutorial-name-confirm"
+              class="primary-btn"
+              type="submit"
+              disabled
+            >Mở quán thôi! 🎉</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== TAB QUÁN (HOME) ===== -->
+      <div id="screen-home" class="screen">
+        <div class="home-wrap">
+          <div class="home-banner">
+            <div class="home-shop-icon">🏪</div>
+            <h2 id="home-shop-name" class="home-shop-name">Cơm Tấm Cô Ba</h2>
+            <div class="home-star-row">
+              <span id="home-star" class="home-star">⭐ 4.0</span>
+            </div>
+          </div>
+
+          <div class="home-stats">
+            <div class="home-stat-card">
+              <span class="home-stat-label">📅 Ngày</span>
+              <span id="home-day" class="home-stat-value">Ngày 1</span>
+            </div>
+            <div class="home-stat-card">
+              <span class="home-stat-label">💰 Tiền mặt</span>
+              <span id="home-money" class="home-stat-value">200.000đ</span>
+            </div>
+          </div>
+
+          <div class="home-actions">
+            <button id="home-btn-open" class="primary-btn" type="button">🔥 Mở bán hôm nay</button>
+            <p class="home-hint">Vào Chuẩn bị để mua nguyên liệu trước!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB CHUẨN BỊ (PREP) ===== -->
       <div id="screen-prep" class="screen">
         <header class="topbar prep-hud">
           <span id="prep-hud-day">Ngày 1</span>
@@ -49,14 +111,19 @@
         </footer>
       </div>
 
+      <!-- ===== MÀN BÁN HÀNG (SERVICE) ===== -->
       <div id="screen-service" class="screen">
         <header class="topbar service-hud">
           <button id="btn-pause-menu" class="btn-pause" type="button" aria-label="Menu tạm dừng">☰</button>
           <span id="service-hud-day">Ngày 1</span>
           <span id="service-hud-money">200.000đ</span>
-          <span id="service-hud-timer">120s</span>
+          <span id="service-hud-timer" class="hud-clock">05:00</span>
           <span id="service-hud-star">⭐ 4.0</span>
         </header>
+        <!-- Thanh tiến trình thời gian (không hiện số, chỉ thể hiện trực quan) -->
+        <div class="service-progress-track" aria-hidden="true">
+          <div id="service-progress-bar" class="service-progress-bar"></div>
+        </div>
 
         <div id="service-toast" class="service-toast hidden" role="status" aria-live="polite"></div>
 
@@ -65,7 +132,6 @@
           <div class="pause-menu-card">
             <h2>Menu</h2>
             <button id="btn-pause-close" class="btn-close" type="button" aria-label="Đóng menu">➖</button>
-            
             <div class="pause-menu-items">
               <button id="btn-pause-continue" class="pause-menu-btn primary" type="button">Tiếp tục bán</button>
               <button id="btn-pause-audio" class="pause-menu-btn" type="button">🔊 Âm thanh</button>
@@ -125,21 +191,74 @@
           <button id="btn-deliver-plate" class="deliver-btn" type="button">🚀 Giao đĩa</button>
         </div>
 
-        <footer class="service-footer">
-
-        </footer>
+        <footer class="service-footer"></footer>
       </div>
 
+      <!-- ===== MÀN TỔNG KẾT (SUMMARY) ===== -->
       <section id="screen-summary" class="screen">
-            <header class="topbar">
-                <span id="summary-hud-day">Ngày 1</span>
-                <span>Đã xong</span>
-            </header>
-            <h1 style="text-align:center;margin:8px 0 4px;font-size:1.5rem;">Tổng kết</h1>
-            <div id="summary-content" class="summary-content">
-                <!-- JS render vào đây -->
+        <header class="topbar">
+          <span id="summary-hud-day">Ngày 1</span>
+          <span>Đã xong</span>
+        </header>
+        <h1 style="text-align:center;margin:8px 0 4px;font-size:1.5rem;">Tổng kết</h1>
+        <div id="summary-content" class="summary-content">
+          <!-- JS render vào đây -->
+        </div>
+      </section>
+
+      <!-- ===== TAB DOANH THU (REVENUE) ===== -->
+      <div id="screen-revenue" class="screen">
+        <header class="topbar">
+          <span>📊 Sổ Doanh Thu</span>
+        </header>
+        <div class="placeholder-screen">
+          <div class="placeholder-icon">📊</div>
+          <h2>Sổ Doanh Thu</h2>
+          <p>Tính năng này sẽ có ở mốc tiếp theo!</p>
+        </div>
+      </div>
+
+      <!-- ===== TAB CÀI ĐẶT (SETTINGS) ===== -->
+      <div id="screen-settings" class="screen">
+        <header class="topbar">
+          <span>⚙️ Cài Đặt</span>
+        </header>
+        <div id="settings-content" class="settings-content">
+          <!-- JS render vào đây -->
+        </div>
+
+        <!-- Dialog xác nhận chơi lại -->
+        <div id="settings-reset-dialog" class="pause-confirm-dialog hidden">
+          <div class="confirm-card">
+            <p>❌ Xóa toàn bộ tiến trình và chơi lại từ đầu?</p>
+            <div class="confirm-buttons">
+              <button id="settings-reset-cancel" class="btn-secondary" type="button">Huỷ bỏ</button>
+              <button id="settings-reset-confirm" class="btn-primary" type="button">Đồng ý</button>
             </div>
-        </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== BOTTOM NAV ===== -->
+      <nav id="bottom-nav" class="bottom-nav hidden" role="tablist" aria-label="Điều hướng chính">
+        <button class="bottom-nav-tab" data-target="home" role="tab" aria-selected="false" type="button">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Quán</span>
+        </button>
+        <button class="bottom-nav-tab" data-target="prep" role="tab" aria-selected="false" type="button">
+          <span class="nav-icon">🍚</span>
+          <span class="nav-label">Chuẩn bị</span>
+        </button>
+        <button class="bottom-nav-tab" data-target="revenue" role="tab" aria-selected="false" type="button">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Doanh thu</span>
+        </button>
+        <button class="bottom-nav-tab" data-target="settings" role="tab" aria-selected="false" type="button">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Cài đặt</span>
+        </button>
+      </nav>
+
     </div>
 
     <script type="module" src="js/main.js"></script>

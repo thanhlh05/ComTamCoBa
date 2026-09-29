@@ -20,6 +20,13 @@ export const initialState = {
   lastSummary: null,
   loanUsed: false,
   soundEnabled: true,
+  // Tên quán (mục 13) và trạng thái tutorial (mục 18)
+  shopName: '',
+  tutorialDone: false,
+  // Cài đặt giờ mở/đóng và thời lượng bán (mục 15, 16)
+  openHour: 5,
+  closeHour: 23,
+  dayDurationMinutes: 3,
 };
 
 let activeState = null;

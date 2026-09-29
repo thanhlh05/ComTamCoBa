@@ -103,7 +103,7 @@ function renderSummary() {
     const s = getState();
     delete s._rentAppliedForDay; // reset cờ cho ngày mới
     startNewDay(s);
-    window.__game?.showScreen('prep');
+    window.__game?.showScreen('home');
   });
 }
 
