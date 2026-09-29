@@ -21,7 +21,7 @@ import {
 import { handleGrillClick, getGrillSlots, getTray } from './grill.js';
 import { initSummaryScreen, showSummaryScreen } from './summary.js';
 import { initPauseMenu, registerServiceFunctions } from './pausemenu.js';
-import { initTutorial, showTutorialScreen, needsTutorial } from './tutorial.js';
+import { initTutorial, showTutorialScreen, needsTutorial, startFirstTimeFlow } from './tutorial.js';
 import { initNav, updateNav } from './nav.js';
 import { initHomeScreen, renderHomeScreen } from './home.js';
 import { initSettingsScreen, renderSettingsScreen } from './settings.js';
@@ -111,7 +111,7 @@ function initializeGame() {
   // Nút Start → tutorial (lần đầu) hoặc thẳng home (người chơi cũ)
   document.getElementById('start-button')?.addEventListener('click', () => {
     if (needsTutorial()) {
-      showScreen('tutorial');
+      startFirstTimeFlow();
     } else {
       showScreen('home');
     }

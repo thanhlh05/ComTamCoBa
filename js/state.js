@@ -20,11 +20,10 @@ export const initialState = {
   lastSummary: null,
   revenueHistory: [], // tối đa 30 bản ghi gần nhất (mục 17)
   loanUsed: false,
-  soundEnabled: true,
-  // Tên quán (mục 13) và trạng thái tutorial (mục 18)
+  soundEnabled: true, // Tên quán (mục 13) và trạng thái tutorial (mục 18)
   shopName: '',
-  tutorialDone: false,
-  // Cài đặt giờ mở/đóng và thời lượng bán (mục 15, 16)
+  tutorialDone: false, // Cài đặt giờ mở/đóng và thời lượng bán (mục 15, 16)
+  guideSeen: false, // đã xem hướng dẫn 4 thẻ lần đầu (mục 18)
   openHour: 5,
   closeHour: 23,
   dayDurationMinutes: 3,
@@ -62,6 +61,7 @@ export function loadState() {
       },
       upgrades: { ...(parsed.upgrades || {}) },
       revenueHistory: Array.isArray(parsed.revenueHistory) ? parsed.revenueHistory : [],
+      guideSeen: Boolean(parsed.guideSeen) || Boolean(parsed.tutorialDone),
     };
     return activeState;
   } catch (error) {
