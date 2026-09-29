@@ -148,6 +148,23 @@ export function buyIngredient(itemId, batchCount = 10, state = getState()) {
 }
 
 /**
+ * Đổ bỏ nguyên liệu (mục 22) — trừ tồn kho, không hoàn tiền.
+ */
+export function discardIngredient(itemId, qty, state = getState()) {
+  const item = GAME_DATA.menu[itemId];
+  if (!item) return { success: false, error: 'Món không tồn tại' };
+
+  const stock = Number(state.inventory?.[itemId]) || 0;
+  const n = Math.floor(Number(qty) || 0);
+  if (n <= 0) return { success: false, error: 'Số lượng không hợp lệ' };
+  if (n > stock) return { success: false, error: 'Không đủ tồn kho' };
+
+  state.inventory[itemId] = stock - n;
+  saveState(state);
+  return { success: true, itemId, qty: n, remaining: state.inventory[itemId] };
+}
+
+/**
  * Mua nâng cấp theo mục 8.
  */
 export function buyUpgrade(upgradeId, state = getState()) {

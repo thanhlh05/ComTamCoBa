@@ -1,4 +1,4 @@
-import { getState, buyIngredient, buyUpgrade } from './state.js';
+import { getState, buyIngredient, buyUpgrade, discardIngredient } from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 
@@ -44,7 +44,22 @@ export function renderPrepScreen() {
 }
 
 /**
- * Tạo HTML danh sách nguyên liệu theo mục 3 GAME_DESIGN.
+ * Cảnh báo hao qua đêm (mục 22 / mục 3).
+ * Sườn & chả hao 50% (làm tròn xuống) nếu chưa có Tủ lạnh.
+ */
+function spoilageHint(itemId, stock, state) {
+  if (stock <= 0) return '';
+  const hasFridge = Boolean(state.upgrades?.fridge);
+  const canSpoil = (itemId === 'suon' || itemId === 'cha') && !hasFridge;
+  if (canSpoil) {
+    const lost = Math.floor(stock * 0.5);
+    return `<div class="spoil-hint spoil-warn">🟠 Qua đêm sẽ hao ${lost} phần</div>`;
+  }
+  return `<div class="spoil-hint spoil-ok">🟢 Không hao qua đêm</div>`;
+}
+
+/**
+ * Tạo HTML danh sách nguyên liệu theo mục 3 + 22 GAME_DESIGN.
  */
 function renderIngredientsList(state) {
   const items = Object.values(GAME_DATA.menu);
@@ -52,8 +67,9 @@ function renderIngredientsList(state) {
   return items
     .map((item) => {
       const icon = ASSETS[item.id] || '🍚';
-      const stock = state.inventory?.[item.id] || 0;
-      const isLocked = (item.id === 'cha' || item.id === 'canh') && !Boolean(state.upgrades?.unlockMenu);
+      const stock = Number(state.inventory?.[item.id]) || 0;
+      const isLocked =
+        (item.id === 'cha' || item.id === 'canh') && !Boolean(state.upgrades?.unlockMenu);
       const batchCost = item.cost * 10;
       const canAfford = !isLocked && state.money >= batchCost;
 
@@ -65,6 +81,20 @@ function renderIngredientsList(state) {
         ? 'Chưa mở'
         : `Mua lố 10<small>${formatMoney(batchCost)}</small>`;
 
+      const spoilHtml = !isLocked ? spoilageHint(item.id, stock, state) : '';
+
+      const discardBtn =
+        !isLocked && stock > 0
+          ? `<button
+              type="button"
+              class="discard-btn"
+              data-action="discard-ingredient"
+              data-id="${item.id}"
+              data-stock="${stock}"
+              aria-label="Đổ bỏ ${item.name}"
+            >Đổ bỏ</button>`
+          : '';
+
       return `
         <div class="prep-card ${isLocked ? 'locked' : ''}">
           <div class="card-info">
@@ -73,9 +103,10 @@ function renderIngredientsList(state) {
               <div class="card-name">${item.name}</div>
               <div class="card-meta">${metaHtml}</div>
               <div class="card-stock">Tồn kho: <strong>${stock}</strong> phần</div>
+              ${spoilHtml}
             </div>
           </div>
-          <div class="card-action">
+          <div class="card-action card-action-col">
             <button
               type="button"
               class="buy-btn ${!canAfford ? 'disabled' : ''}"
@@ -86,6 +117,7 @@ function renderIngredientsList(state) {
             >
               ${btnText}
             </button>
+            ${discardBtn}
           </div>
         </div>
       `;
@@ -166,15 +198,89 @@ function handleContentClick(event) {
 
   if (action === 'buy-ingredient') {
     const result = buyIngredient(id, 10);
-    if (result.success) {
-      renderPrepScreen();
-    }
+    if (result.success) renderPrepScreen();
   } else if (action === 'buy-upgrade') {
     const result = buyUpgrade(id);
-    if (result.success) {
-      renderPrepScreen();
-    }
+    if (result.success) renderPrepScreen();
+  } else if (action === 'discard-ingredient') {
+    openDiscardDialog(id, Number(button.dataset.stock) || 0);
   }
+}
+
+let discardItemId = null;
+let discardMax = 0;
+
+function ensureDiscardDialog() {
+  let el = document.getElementById('prep-discard-dialog');
+  if (el) return el;
+
+  el = document.createElement('div');
+  el.id = 'prep-discard-dialog';
+  el.className = 'pause-confirm-dialog hidden';
+  el.innerHTML = `
+    <div class="confirm-card">
+      <p id="prep-discard-msg">Đổ bỏ bao nhiêu phần?</p>
+      <div class="discard-input-wrap">
+        <button type="button" class="hour-btn" id="prep-discard-minus" aria-label="Giảm">−</button>
+        <input id="prep-discard-qty" class="discard-qty-input" type="number" min="1" inputmode="numeric" />
+        <button type="button" class="hour-btn" id="prep-discard-plus" aria-label="Tăng">+</button>
+      </div>
+      <p class="discard-max-hint" id="prep-discard-hint"></p>
+      <div class="confirm-buttons">
+        <button id="prep-discard-cancel" class="btn-secondary" type="button">Huỷ bỏ</button>
+        <button id="prep-discard-confirm" class="btn-primary" type="button">Đổ bỏ</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('screen-prep')?.appendChild(el);
+
+  const qtyInput = () => document.getElementById('prep-discard-qty');
+
+  document.getElementById('prep-discard-minus')?.addEventListener('click', () => {
+    const input = qtyInput();
+    if (!input) return;
+    input.value = String(Math.max(1, (Number(input.value) || 1) - 1));
+  });
+  document.getElementById('prep-discard-plus')?.addEventListener('click', () => {
+    const input = qtyInput();
+    if (!input) return;
+    input.value = String(Math.min(discardMax, (Number(input.value) || 1) + 1));
+  });
+  document.getElementById('prep-discard-cancel')?.addEventListener('click', closeDiscardDialog);
+  document.getElementById('prep-discard-confirm')?.addEventListener('click', () => {
+    const n = Math.floor(Number(qtyInput()?.value) || 0);
+    if (n < 1 || n > discardMax) return;
+    const result = discardIngredient(discardItemId, n);
+    closeDiscardDialog();
+    if (result.success) renderPrepScreen();
+  });
+
+  return el;
+}
+
+function openDiscardDialog(itemId, stock) {
+  if (stock <= 0) return;
+  discardItemId = itemId;
+  discardMax = stock;
+  const item = GAME_DATA.menu[itemId];
+  const el = ensureDiscardDialog();
+  const msg = document.getElementById('prep-discard-msg');
+  const hint = document.getElementById('prep-discard-hint');
+  const input = document.getElementById('prep-discard-qty');
+  if (msg) msg.textContent = `Đổ bỏ ${item?.name || 'nguyên liệu'}? Không hoàn tiền.`;
+  if (hint) hint.textContent = `Tối đa ${stock} phần trong kho`;
+  if (input) {
+    input.max = String(stock);
+    input.value = String(stock); // mặc định đổ hết (dễ dọn kho)
+    input.min = '1';
+  }
+  el.classList.remove('hidden');
+}
+
+function closeDiscardDialog() {
+  document.getElementById('prep-discard-dialog')?.classList.add('hidden');
+  discardItemId = null;
+  discardMax = 0;
 }
 
 /**
