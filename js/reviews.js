@@ -15,14 +15,15 @@ export function resolveReviewReason(info) {
   return 'good';
 }
 
-/** Rút gọn order thành chữ ngắn */
+/** Rút gọn order: "Cơm sườn bì + trứng" */
 export function formatOrderShort(orderIds) {
   if (!orderIds || !orderIds.length) return '';
-  const names = orderIds.map((id) => GAME_DATA.menu[id]?.name || id);
-  const main = (names[0] || 'Cơm').replace(/^Cơm tấm$/, 'Cơm');
-  const rest = names.slice(1);
-  if (rest.length === 0) return main;
-  return `${main} + ${rest.join(' + ')}`;
+  const map = GAME_DATA.orderShortNames || {};
+  const parts = orderIds.map((id) => map[id] || GAME_DATA.menu[id]?.name || id);
+  const main = parts[0] || 'Cơm';
+  const extras = parts.slice(1);
+  if (!extras.length) return main;
+  return `${main} ${extras.join(' + ')}`;
 }
 
 function itemName(id) {

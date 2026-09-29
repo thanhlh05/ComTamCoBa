@@ -34,6 +34,8 @@ export const initialState = {
   // M16 — giá bán (active = đang bán; pending = chỉnh ở Chuẩn bị, áp dụng ngày sau)
   menuPrices: {},
   pendingMenuPrices: {},
+    // M17 — số lần phục vụ ≥4★ theo loại khách (khách quen)
+  typeServeGood: {},
 };
 
 let activeState = null;
@@ -77,6 +79,7 @@ export function loadState() {
         5: Number(parsed.starCounts?.[5]) || 0,
       },
       reviews: Array.isArray(parsed.reviews) ? parsed.reviews.slice(0, 30) : [],
+      typeServeGood: { ...(parsed.typeServeGood || {}) },
       menuPrices: { ...(parsed.menuPrices || {}) },
       pendingMenuPrices: { ...(parsed.pendingMenuPrices || {}) },
     };

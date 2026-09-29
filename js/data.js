@@ -30,6 +30,45 @@ export const GAME_DATA = {
       // heSoGia > 1 → khách đông hơn → khoảng cách nhỏ hơn
       return ((dayLengthSeconds / count) * (1.4 - 0.1 * star) / (1 + bonusSignage)) / factor;
     },
+    // M17 — tên ngắn trên bubble order
+    orderShortNames: {
+      com: 'Cơm',
+      suon: 'sườn',
+      bi: 'bì',
+      cha: 'chả',
+      trung: 'trứng',
+      canh: 'canh',
+      tra: 'trà',
+    },
+
+    // M17 — câu thoại khi khách vừa tới (mục 25)
+    customerLines: {
+      hoc_sinh: [
+        'Quán ơi cho con cơm sườn bì, thêm miếng trứng nha!',
+        'Cho con cơm sườn với trà đá nha!',
+        'Con đói quá, làm nhanh giúp con với!',
+      ],
+      van_phong: [
+        'Cho em cơm sườn chả, thêm trà đá.',
+        'Cho em một phần bình thường, mang đi giúp em.',
+        'Cho em cơm sườn bì, không ớt nha.',
+      ],
+      bac_tai: [
+        'Cho tôi phần sườn nhiều cơm nha, làm lẹ giúp tôi!',
+        'Cho tôi cơm sườn với trứng, ăn nhanh xong chạy tiếp.',
+        'Thêm trà đá cho tỉnh táo nha!',
+      ],
+      du_lich: [
+        'Cho em một phần cơm sườn với trà đá ạ!',
+        'Cho em thử một phần cơm tấm đặc biệt ạ!',
+        'Nghe nói ở đây ngon, cho em thử phần đầy đủ!',
+      ],
+      shipper: [
+        'Đơn giao gấp giùm em, cơm sườn 2 phần!',
+        'Làm nhanh giúp anh, khách đang chờ!',
+        'Cơm sườn bì, đóng hộp mang đi nha!',
+      ],
+    },
   },
   star: {
     start: 4.0,

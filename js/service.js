@@ -2,7 +2,7 @@ import { getState, saveState, recordRating, setLastSummary, backupDayBeforeServi
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import { scoreOrder } from './scoring.js';
-import { pushReview, resolveReviewReason } from './reviews.js';
+import { pushReview, resolveReviewReason, formatOrderShort } from './reviews.js';
 import { getPriceFactor } from './pricing.js';
 import {
   initGrill,
@@ -83,7 +83,17 @@ function spawnCustomer() {
   const extraCount = Math.floor(Math.random() * (type.extraMax - type.extraMin + 1)) + type.extraMin;
   const shuffled = [...availableExtras].sort(() => 0.5 - Math.random());
   const order = ['com', ...shuffled.slice(0, extraCount)];
-  const maxPatience = type.patience * (1 + (state.upgrades?.fanMotor ? 0.15 : 0));
+
+  // Khách quen: từ lần phục vụ ≥4★ thứ 5 trở đi, 20% ra khách quen
+  const goodCount = Number(state.typeServeGood?.[type.id]) || 0;
+  const isRegular = goodCount >= 5 && Math.random() < 0.2;
+
+  let maxPatience = type.patience * (1 + (state.upgrades?.fanMotor ? 0.15 : 0));
+  if (isRegular) maxPatience *= 1.1; // +10% kiên nhẫn
+
+  // Câu thoại
+  const lines = GAME_DATA.customerLines?.[type.id] || [];
+  const line = lines.length ? lines[Math.floor(Math.random() * lines.length)] : '';
 
   const customer = {
     id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -91,6 +101,10 @@ function spawnCustomer() {
     order,
     maxPatience,
     patience: maxPatience,
+    isRegular,
+    tipBonus: isRegular ? 0.05 : 0, // +5 điểm % boa
+    speech: line,
+    speechUntil: line ? performance.now() + 4000 : 0, // hiện ~4s
   };
   customers.push(customer);
   if (!selectedCustomerId) selectedCustomerId = customer.id;
@@ -104,20 +118,35 @@ function renderCustomers() {
     rowEl.innerHTML = '<span class="queue-empty">Chưa có khách nào đang đợi...</span>';
     return;
   }
-  rowEl.innerHTML = customers.map((c) => {
-    const isSelected = c.id === selectedCustomerId;
-    const pct = Math.max(0, (c.patience / c.maxPatience) * 100);
-    const colorClass = pct > 50 ? 'high' : pct > 20 ? 'med' : 'low';
-    const orderIcons = c.order.map((id) => `<span>${ASSETS[id] || '🍚'}</span>`).join('');
-    return `
-      <div class="customer-card ${isSelected ? 'selected' : ''}" data-id="${c.id}" role="button">
-        <div class="order-bubble">${orderIcons}</div>
+  const now = performance.now();
+  rowEl.innerHTML = customers
+    .map((c) => {
+      const isSelected = c.id === selectedCustomerId;
+      const pct = Math.max(0, (c.patience / c.maxPatience) * 100);
+      const colorClass = pct > 50 ? 'high' : pct > 20 ? 'med' : 'low';
+      // Icon đại diện: sườn nếu có, không thì cơm
+      const leadId = c.order.includes('suon') ? 'suon' : 'com';
+      const leadIcon = ASSETS[leadId] || '🍚';
+      const orderText = formatOrderShort(c.order);
+      const showSpeech = c.speech && c.speechUntil && now < c.speechUntil && !isSelected;
+      const regularTag = c.isRegular
+        ? `<span class="regular-tag">Khách quen</span>`
+        : '';
+
+      return `
+      <div class="customer-card ${isSelected ? 'selected' : ''} ${c.isRegular ? 'regular' : ''}" data-id="${c.id}" role="button">
+        ${showSpeech ? `<div class="speech-bubble">${c.speech}</div>` : ''}
+        <div class="order-bubble">
+          <span class="order-lead-icon">${leadIcon}</span>
+          <span class="order-text">${orderText}</span>
+        </div>
+        ${regularTag}
         <div class="customer-avatar">${c.type.icon}</div>
         <div class="customer-name">${c.type.label}</div>
         <div class="patience-track"><div class="patience-fill ${colorClass}" style="width: ${pct}%"></div></div>
-      </div>
-    `;
-  }).join('');
+      </div>`;
+    })
+    .join('');
 }
 
 function renderPlate() {
@@ -173,9 +202,24 @@ function deliverPlate() {
   if (!customer) return;
 
   const result = scoreOrder(customer, currentPlate);
-  const state = getState();
-  state.money += result.totalEarned;
+    const state = getState();
+
+  // Khách quen: +5% boa trên giá đơn (mục 25)
+  let tipExtra = 0;
+  if (customer.isRegular && result.stars >= 4) {
+    tipExtra = Math.round(result.orderPrice * (customer.tipBonus || 0.05));
+  }
+  const totalEarned = result.totalEarned + tipExtra;
+  state.money += totalEarned;
   recordRating(result.stars);
+
+  // Đếm phục vụ ≥4★ theo loại (mở khách quen từ lần 5)
+  if (result.stars >= 4 && customer.type?.id) {
+    if (!state.typeServeGood) state.typeServeGood = {};
+    const tid = customer.type.id;
+    state.typeServeGood[tid] = (Number(state.typeServeGood[tid]) || 0) + 1;
+    saveState(state);
+  }
 
   const reason = resolveReviewReason({
     left: false,
@@ -195,7 +239,7 @@ function deliverPlate() {
 
   dayStats.servedCount++;
   dayStats.revenue += result.baseEarned;
-  dayStats.tips += result.tipEarned;
+  dayStats.tips += result.tipEarned + tipExtra;
 
   customers = customers.filter((c) => c.id !== customer.id);
   selectedCustomerId = customers[0]?.id || null;
@@ -204,7 +248,10 @@ function deliverPlate() {
   renderPlate();
   renderCustomers();
   updateHUD();
-  showServiceToast(`+${formatMoney(result.totalEarned)} (${result.stars}⭐) - ${customer.type.label}!`);
+
+  showServiceToast(
+    `+${formatMoney(totalEarned)} (${result.stars}⭐)${customer.isRegular ? ' 💚' : ''} - ${customer.type?.label || 'Khách'}!`
+  );
 }
 
 function updateCustomers(dt) {
@@ -255,6 +302,21 @@ function updateCustomers(dt) {
     if (!customers.find((c) => c.id === selectedCustomerId)) {
       selectedCustomerId = customers[0]?.id || null;
     }
+    renderCustomers();
+  }
+
+  // M17 — Cập nhật ẩn/hiện bong bóng thoại theo thời gian
+  const now = performance.now();
+  let speechChanged = false;
+
+  customers.forEach((c) => {
+    if (c.speechUntil && now >= c.speechUntil) {
+      c.speechUntil = 0;
+      speechChanged = true;
+    }
+  });
+
+  if (speechChanged && !(queueChanged || customers.length > 0)) {
     renderCustomers();
   }
 }
@@ -393,6 +455,9 @@ export function initServiceScreen() {
     const card = e.target.closest('.customer-card');
     if (!card) return;
     selectedCustomerId = card.dataset.id;
+    // Ẩn thoại khi chọn
+    const picked = customers.find((c) => c.id === selectedCustomerId);
+    if (picked) picked.speechUntil = 0;
     renderCustomers();
   });
 
