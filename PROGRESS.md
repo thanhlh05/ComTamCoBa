@@ -35,5 +35,25 @@
 - **Còn dở**: Bảng thu chi màn Tổng kết ngày và cơ chế qua ngày mới (thuộc Mốc 4).
 - **Bước tiếp theo**: Mốc 4 (`js/summary.js`) — bảng thu chi (doanh thu, tiền boa, tiền thuê mặt bằng, tổng lời/lỗ, vay 1 lần / Game Over, nút "Qua ngày mới").
 
+## Sửa lỗi M3B
+- **Lỗi 1**: HUD màn Tổng kết hiện "Ngày 1" nhưng tiêu đề card hiện "Tổng kết ngày 2" (chênh lệch ngày).
+  - **Nguyên nhân**: HUD (summary-hud-day) không được cập nhật bằng JS, chỉ hiển thị hardcoded "Ngày 1" trong HTML.
+  - **Sửa**: Thêm code cập nhật summary-hud-day trong `renderSummary()` để luôn hiển thị `Ngày ${data.day}` đồng bộ với tiêu đề card.
+- **Lỗi 2**: Màn Bán hàng có 2 nút tạm "⬅ Về chuẩn bị" và "Tổng kết" còn sót từ test M1.
+  - **Sửa**: Xóa 2 nút khỏi HTML (`index.html` dòng 102-103) và xóa listener trong `js/service.js`. Màn Bán hàng chỉ kết thúc khi hết giờ hoặc hết khách.
+- **File thay đổi**: `index.html`, `js/summary.js`, `js/service.js`.
+- **Kiểm tra**: Chơi hết ngày 1, HUD và tiêu đề Tổng kết đều ghi "Ngày 1"; màn Bán hàng không có nút exit.
 
+## Mốc 6 — Menu Tạm Dừng (js/pausemenu.js)
+- **Đã làm**:
+  - Nút ☰ ở góc trên bên trái HUD màn Bán hàng, chạm vào tạm dừng game thật (vòng lặp game, spawn khách, nướng sườn, thanh kiên nhẫn đều đứng lại).
+  - Menu overlay gồm 4 mục:
+    1. **Tiếp tục bán**: đóng menu, chạy tiếp đúng chỗ dừng.
+    2. **🔊/🔇 Âm thanh**: bật/tắt nhanh, lưu vào state, đồng bộ với công tắc Cài đặt (M7 sẽ nối vào).
+    3. **Đóng cửa sớm**: xác nhận → kết thúc ngày ngay, chuyển Tổng kết, khách chưa giao coi như bỏ đi, lưu kết quả.
+    4. **Thoát về Chuẩn bị**: xác nhận → rollback toàn bộ: không tính doanh thu, không lưu, không tăng ngày, không trừ tiền thuê, quay về Chuẩn bị với tiền/kho như trước.
+  - Kỹ thuật: `backupDayBeforeService()` lưu state trước khi vào bán; "Thoát" khôi phục backup; "Đóng cửa sớm" gọi `finishDay()` ngay.
+  - Tránh circular dependency: pausemenu.js không import service.js, thay vào đó registerServiceFunctions() được gọi từ main.js.
+  - CSS: overlay tối với z-index 1000, menu card ở giữa, confirm dialog ở z-index 1001.
+- **File thay đổi**: `js/pausemenu.js` (tạo mới), `index.html`, `js/service.js`, `js/state.js`, `js/main.js`, `style.css`.
 

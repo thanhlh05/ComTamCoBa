@@ -37,6 +37,10 @@ function renderSummary() {
   const data = getSummaryData();
   const state = getState();
 
+  // Cập nhật HUD ngày
+  const hudDayEl = document.getElementById('summary-hud-day');
+  if (hudDayEl) hudDayEl.textContent = `Ngày ${data.day || 1}`;
+
   // Áp dụng trừ thuê + xử lý vay / game over (chỉ 1 lần khi vào màn)
   if (!state._rentAppliedForDay || state._rentAppliedForDay !== data.day) {
     const result = applyRentAndLoan(state);

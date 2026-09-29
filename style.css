@@ -367,4 +367,165 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
   text-align: center;
 }
 
+/* === MENU TẠM DỪNG (PAUSE MENU) === */
+.btn-pause {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(242, 140, 40, 0.2);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-pause:active { transform: scale(0.95); }
+
+.pause-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pause-menu-overlay.hidden {
+  display: none;
+}
+
+.pause-menu-card {
+  background: rgba(255, 250, 244, 0.98);
+  border: 2px solid rgba(90, 58, 34, 0.2);
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 280px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.pause-menu-card h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  color: var(--ink);
+  text-align: center;
+}
+
+.btn-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(90, 58, 34, 0.1);
+  color: var(--ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-close:active { transform: scale(0.9); }
+
+.pause-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pause-menu-btn {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(242, 140, 40, 0.15);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+.pause-menu-btn:active { transform: scale(0.97); }
+.pause-menu-btn.primary {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(242, 140, 40, 0.3);
+}
+.pause-menu-btn.danger {
+  background: rgba(200, 85, 61, 0.15);
+  color: var(--danger);
+}
+
+.pause-confirm-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pause-confirm-dialog.hidden {
+  display: none;
+}
+
+.confirm-card {
+  background: rgba(255, 250, 244, 0.98);
+  border: 2px solid rgba(90, 58, 34, 0.2);
+  border-radius: 18px;
+  padding: 24px 18px;
+  width: 85%;
+  max-width: 260px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.confirm-card p {
+  margin: 0 0 18px;
+  font-size: 0.95rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-secondary, .btn-primary {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: rgba(90, 58, 34, 0.1);
+  color: var(--ink);
+}
+.btn-secondary:active { transform: scale(0.95); }
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(242, 140, 40, 0.3);
+}
+.btn-primary:active { transform: scale(0.95); }
 

@@ -1,4 +1,4 @@
-import { getState, saveState, recordRating, setLastSummary } from './state.js';
+import { getState, saveState, recordRating, setLastSummary, backupDayBeforeService } from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import { scoreOrder } from './scoring.js';
@@ -245,7 +245,7 @@ function gameLoop(now) {
   animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-function finishDay() {
+export function finishDay() {
   stopServiceLoop();
   const state = getState();
   dayStats.endStar = state.star;
@@ -272,6 +272,10 @@ export function stopServiceLoop() {
 
 export function startService() {
   const state = getState();
+  
+  // Lưu backup trần tái trước khi bán (dùng để rollback nếu người chơi thoát sớm)
+  backupDayBeforeService(state);
+  
   remainingTime = GAME_DATA.timing.dayLength || 120;
 
   // Bảng hiệu đèn led: khách nhiều hơn ~15%
@@ -333,7 +337,6 @@ export function initServiceScreen() {
 
   document.getElementById('btn-trash-plate')?.addEventListener('click', trashPlate);
   document.getElementById('btn-deliver-plate')?.addEventListener('click', deliverPlate);
-  document.getElementById('btn-service-summary')?.addEventListener('click', finishDay);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopServiceLoop();

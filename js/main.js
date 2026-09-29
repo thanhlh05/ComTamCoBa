@@ -14,9 +14,12 @@ import {
   startService,
   stopServiceLoop,
   getServiceState,
+  finishDay,
+  startServiceLoop,
 } from './service.js';
 import { handleGrillClick, getGrillSlots, getTray } from './grill.js';
 import { initSummaryScreen, showSummaryScreen } from './summary.js';
+import { initPauseMenu, registerServiceFunctions } from './pausemenu.js';
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -67,6 +70,8 @@ function initializeGame() {
   });
 
   initServiceScreen();
+  registerServiceFunctions(stopServiceLoop, startServiceLoop, finishDay);
+  initPauseMenu();
   initSummaryScreen();
 
   showScreen('title');
@@ -90,4 +95,7 @@ window.__game = {
   handleGrillClick,
   getGrillSlots,
   getTray,
+  finishDay,
+  startServiceLoop,
+  stopServiceLoop,
 };

@@ -19,6 +19,7 @@ export const initialState = {
   upgrades: {},
   lastSummary: null,
   loanUsed: false,
+  soundEnabled: true,
 };
 
 let activeState = null;
@@ -215,4 +216,32 @@ export function applyRentAndLoan(state = getState()) {
   return { money: state.money, rent, loanGiven, gameOver };
 }
 
+/**
+ * Lưu backup trạng thái tiền và kho trước khi vào màn Bán hàng.
+ * Dùng để rollback khi người chơi bấm "Thoát về Chuẩn bị".
+ */
+export function backupDayBeforeService(state = getState()) {
+  state._dayBackupBeforeService = {
+    money: state.money,
+    inventory: { ...state.inventory },
+    loanUsed: state.loanUsed,
+  };
+  saveState(state);
+  return state._dayBackupBeforeService;
+}
+
+/**
+ * Khôi phục trạng thái từ backup (rollback ngày).
+ */
+export function restoreDayBackup(state = getState()) {
+  if (state._dayBackupBeforeService) {
+    state.money = state._dayBackupBeforeService.money;
+    state.inventory = { ...state._dayBackupBeforeService.inventory };
+    state.loanUsed = state._dayBackupBeforeService.loanUsed;
+    delete state._dayBackupBeforeService;
+    delete state._rentAppliedForDay;
+    saveState(state);
+  }
+  return state;
+}
 

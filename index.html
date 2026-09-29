@@ -51,6 +51,7 @@
 
       <div id="screen-service" class="screen">
         <header class="topbar service-hud">
+          <button id="btn-pause-menu" class="btn-pause" type="button" aria-label="Menu tạm dừng">☰</button>
           <span id="service-hud-day">Ngày 1</span>
           <span id="service-hud-money">200.000đ</span>
           <span id="service-hud-timer">120s</span>
@@ -58,6 +59,32 @@
         </header>
 
         <div id="service-toast" class="service-toast hidden" role="status" aria-live="polite"></div>
+
+        <!-- Menu tạm dừng overlay -->
+        <div id="pause-menu-overlay" class="pause-menu-overlay hidden">
+          <div class="pause-menu-card">
+            <h2>Menu</h2>
+            <button id="btn-pause-close" class="btn-close" type="button" aria-label="Đóng menu">➖</button>
+            
+            <div class="pause-menu-items">
+              <button id="btn-pause-continue" class="pause-menu-btn primary" type="button">Tiếp tục bán</button>
+              <button id="btn-pause-audio" class="pause-menu-btn" type="button">🔊 Âm thanh</button>
+              <button id="btn-pause-early-close" class="pause-menu-btn" type="button">Đóng cửa sớm</button>
+              <button id="btn-pause-exit-prep" class="pause-menu-btn danger" type="button">Thoát về Chuẩn bị</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dialog xác nhận -->
+        <div id="pause-confirm-dialog" class="pause-confirm-dialog hidden">
+          <div class="confirm-card">
+            <p id="pause-confirm-message">Xác nhận?</p>
+            <div class="confirm-buttons">
+              <button id="pause-confirm-no" class="btn-secondary" type="button">Huỷ bỏ</button>
+              <button id="pause-confirm-yes" class="btn-primary" type="button">Đồng ý</button>
+            </div>
+          </div>
+        </div>
 
         <div id="customer-row" class="customer-row" aria-label="Hàng đợi khách"></div>
 
@@ -99,8 +126,7 @@
         </div>
 
         <footer class="service-footer">
-          <button id="btn-service-back" class="secondary-btn" type="button" data-target="prep">⬅ Về chuẩn bị</button>
-          <button id="btn-service-summary" class="secondary-btn" type="button" data-target="summary">Tổng kết</button>
+
         </footer>
       </div>
 
