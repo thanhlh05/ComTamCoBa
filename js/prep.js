@@ -4,6 +4,10 @@ import { formatMoney, formatStar } from './ui.js';
 
 let activeTab = 'ingredients';
 let cachedOnOpenService = null;
+let discardItemId = null;
+let discardMax = 0;
+let buyTargetId = null;
+let buyQty = 10;
 
 /**
  * Hiển thị toàn bộ màn hình chuẩn bị (HUD + nội dung tab đang chọn).
@@ -45,21 +49,24 @@ export function renderPrepScreen() {
 
 /**
  * Cảnh báo hao qua đêm (mục 22 / mục 3).
- * Sườn & chả hao 50% (làm tròn xuống) nếu chưa có Tủ lạnh.
  */
 function spoilageHint(itemId, stock, state) {
   if (stock <= 0) return '';
+
   const hasFridge = Boolean(state.upgrades?.fridge);
-  const canSpoil = (itemId === 'suon' || itemId === 'cha') && !hasFridge;
+  const canSpoil =
+    (itemId === 'suon' || itemId === 'cha') && !hasFridge;
+
   if (canSpoil) {
     const lost = Math.floor(stock * 0.5);
     return `<div class="spoil-hint spoil-warn">🟠 Qua đêm sẽ hao ${lost} phần</div>`;
   }
+
   return `<div class="spoil-hint spoil-ok">🟢 Không hao qua đêm</div>`;
 }
 
 /**
- * Tạo HTML danh sách nguyên liệu theo mục 3 + 22 GAME_DESIGN.
+ * Tạo HTML danh sách nguyên liệu — M15 mua 1/5/10/tùy chỉnh.
  */
 function renderIngredientsList(state) {
   const items = Object.values(GAME_DATA.menu);
@@ -68,59 +75,144 @@ function renderIngredientsList(state) {
     .map((item) => {
       const icon = ASSETS[item.id] || '🍚';
       const stock = Number(state.inventory?.[item.id]) || 0;
+
       const isLocked =
-        (item.id === 'cha' || item.id === 'canh') && !Boolean(state.upgrades?.unlockMenu);
-      const batchCost = item.cost * 10;
-      const canAfford = !isLocked && state.money >= batchCost;
+        (item.id === 'cha' || item.id === 'canh') &&
+        !Boolean(state.upgrades?.unlockMenu);
+
+      const spoilHtml = !isLocked
+        ? spoilageHint(item.id, stock, state)
+        : '';
 
       const metaHtml = isLocked
         ? '<span class="lock-tag">🔒 Cần mở khóa nâng cấp</span>'
         : `Vốn: <strong>${formatMoney(item.cost)}</strong>/phần`;
 
-      const btnText = isLocked
-        ? 'Chưa mở'
-        : `Mua lố 10<small>${formatMoney(batchCost)}</small>`;
+      // Panel mua mở rộng khi chọn món này
+      const isBuying =
+        !isLocked && buyTargetId === item.id;
 
-      const spoilHtml = !isLocked ? spoilageHint(item.id, stock, state) : '';
+      let actionHtml = '';
 
-      const discardBtn =
-        !isLocked && stock > 0
-          ? `<button
+      if (isLocked) {
+        actionHtml = `
+          <button
+            type="button"
+            class="buy-btn disabled"
+            disabled
+          >Chưa mở</button>`;
+      } else if (isBuying) {
+        const total = item.cost * buyQty;
+        const canAfford =
+          state.money >= total && buyQty > 0;
+
+        const afterStock = stock + buyQty;
+
+        actionHtml = `
+          <div class="buy-panel">
+            <div class="buy-qty-row">
+              <button
+                type="button"
+                class="buy-qty-chip ${buyQty === 1 ? 'active' : ''}"
+                data-action="set-buy-qty"
+                data-qty="1"
+              >1</button>
+
+              <button
+                type="button"
+                class="buy-qty-chip ${buyQty === 5 ? 'active' : ''}"
+                data-action="set-buy-qty"
+                data-qty="5"
+              >5</button>
+
+              <button
+                type="button"
+                class="buy-qty-chip ${buyQty === 10 ? 'active' : ''}"
+                data-action="set-buy-qty"
+                data-qty="10"
+              >10</button>
+
+              <button
+                type="button"
+                class="buy-qty-chip ${![1, 5, 10].includes(buyQty) ? 'active' : ''}"
+                data-action="set-buy-custom"
+                data-id="${item.id}"
+              >Tùy chỉnh</button>
+            </div>
+
+            <div class="buy-preview">
+              <span>SL: <strong>${buyQty}</strong></span>
+              <span>Thành tiền: <strong>${formatMoney(total)}</strong></span>
+              <span>Kho sau: <strong>${afterStock}</strong></span>
+            </div>
+
+            <div class="buy-panel-actions">
+              <button
+                type="button"
+                class="buy-cancel-btn"
+                data-action="cancel-buy"
+              >Huỷ</button>
+
+              <button
+                type="button"
+                class="buy-btn ${!canAfford ? 'disabled' : ''}"
+                data-action="confirm-buy"
+                data-id="${item.id}"
+                ${canAfford ? '' : 'disabled'}
+              >
+                Mua
+                <small>${formatMoney(total)}</small>
+              </button>
+            </div>
+          </div>`;
+      } else {
+        const discardBtn =
+          stock > 0
+            ? `
+              <button
+                type="button"
+                class="discard-btn"
+                data-action="discard-ingredient"
+                data-id="${item.id}"
+                data-stock="${stock}"
+              >Đổ bỏ</button>`
+            : '';
+
+        actionHtml = `
+          <div class="card-action-col">
+            <button
               type="button"
-              class="discard-btn"
-              data-action="discard-ingredient"
+              class="buy-btn"
+              data-action="open-buy"
               data-id="${item.id}"
-              data-stock="${stock}"
-              aria-label="Đổ bỏ ${item.name}"
-            >Đổ bỏ</button>`
-          : '';
+            >Mua</button>
+
+            ${discardBtn}
+          </div>`;
+      }
 
       return `
-        <div class="prep-card ${isLocked ? 'locked' : ''}">
+        <div class="prep-card ${isLocked ? 'locked' : ''} ${isBuying ? 'buying' : ''}">
           <div class="card-info">
             <div class="card-icon" aria-hidden="true">${icon}</div>
+
             <div class="card-details">
               <div class="card-name">${item.name}</div>
+
               <div class="card-meta">${metaHtml}</div>
-              <div class="card-stock">Tồn kho: <strong>${stock}</strong> phần</div>
+
+              <div class="card-stock">
+                Tồn kho: <strong>${stock}</strong> phần
+              </div>
+
               ${spoilHtml}
             </div>
           </div>
-          <div class="card-action card-action-col">
-            <button
-              type="button"
-              class="buy-btn ${!canAfford ? 'disabled' : ''}"
-              data-action="buy-ingredient"
-              data-id="${item.id}"
-              ${canAfford ? '' : 'disabled'}
-              aria-label="Mua 10 phần ${item.name}"
-            >
-              ${btnText}
-            </button>
-            ${discardBtn}
+
+          <div class="card-action">
+            ${actionHtml}
           </div>
-        </div>
-      `;
+        </div>`;
     })
     .join('');
 }
@@ -191,24 +283,57 @@ function renderUpgradesList(state) {
  */
 function handleContentClick(event) {
   const button = event.target.closest('button[data-action]');
+
   if (!button || button.disabled) return;
 
   const { action, id } = button.dataset;
-  if (!action || !id) return;
 
-  if (action === 'buy-ingredient') {
-    const result = buyIngredient(id, 10);
-    if (result.success) renderPrepScreen();
+  if (!action) return;
+
+  if (action === 'open-buy') {
+    buyTargetId = id;
+    buyQty = 10;
+    renderPrepScreen();
+
+  } else if (action === 'cancel-buy') {
+    buyTargetId = null;
+    buyQty = 10;
+    renderPrepScreen();
+
+  } else if (action === 'set-buy-qty') {
+    buyQty = Math.max(
+      1,
+      Number(button.dataset.qty) || 1
+    );
+
+    renderPrepScreen();
+
+  } else if (action === 'set-buy-custom') {
+    openCustomBuyDialog(id);
+
+  } else if (action === 'confirm-buy') {
+    const result = buyIngredient(id, buyQty);
+
+    if (result.success) {
+      buyTargetId = null;
+      buyQty = 10;
+      renderPrepScreen();
+    }
+
   } else if (action === 'buy-upgrade') {
     const result = buyUpgrade(id);
-    if (result.success) renderPrepScreen();
+
+    if (result.success) {
+      renderPrepScreen();
+    }
+
   } else if (action === 'discard-ingredient') {
-    openDiscardDialog(id, Number(button.dataset.stock) || 0);
+    openDiscardDialog(
+      id,
+      Number(button.dataset.stock) || 0
+    );
   }
 }
-
-let discardItemId = null;
-let discardMax = 0;
 
 function ensureDiscardDialog() {
   let el = document.getElementById('prep-discard-dialog');
@@ -283,6 +408,222 @@ function closeDiscardDialog() {
   discardMax = 0;
 }
 
+function openCustomBuyDialog(itemId) {
+  const item = GAME_DATA.menu[itemId];
+
+  if (!item) return;
+
+  const state = getState();
+
+  const maxByMoney = Math.floor(
+    (Number(state.money) || 0) / item.cost
+  );
+
+  const suggested = Math.max(
+    1,
+    Math.min(buyQty || 10, maxByMoney || 1)
+  );
+
+  let el = document.getElementById(
+    'prep-custom-buy-dialog'
+  );
+
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'prep-custom-buy-dialog';
+    el.className = 'pause-confirm-dialog hidden';
+
+    el.innerHTML = `
+      <div class="confirm-card">
+        <p id="prep-custom-buy-msg">
+          Nhập số lượng muốn mua
+        </p>
+
+        <div class="discard-input-wrap">
+          <button
+            type="button"
+            class="hour-btn"
+            id="prep-custom-minus"
+          >−</button>
+
+          <input
+            id="prep-custom-qty"
+            class="discard-qty-input"
+            type="number"
+            min="1"
+            inputmode="numeric"
+          />
+
+          <button
+            type="button"
+            class="hour-btn"
+            id="prep-custom-plus"
+          >+</button>
+        </div>
+
+        <p
+          class="discard-max-hint"
+          id="prep-custom-hint"
+        ></p>
+
+        <div class="confirm-buttons">
+          <button
+            id="prep-custom-cancel"
+            class="btn-secondary"
+            type="button"
+          >Huỷ bỏ</button>
+
+          <button
+            id="prep-custom-ok"
+            class="btn-primary"
+            type="button"
+          >Chọn</button>
+        </div>
+      </div>
+    `;
+
+    document
+      .getElementById('screen-prep')
+      ?.appendChild(el);
+
+    const input = () =>
+      document.getElementById('prep-custom-qty');
+
+    document
+      .getElementById('prep-custom-minus')
+      ?.addEventListener('click', () => {
+        const i = input();
+
+        if (i) {
+          i.value = String(
+            Math.max(
+              1,
+              (Number(i.value) || 1) - 1
+            )
+          );
+        }
+
+        updateCustomBuyHint();
+      });
+
+    document
+      .getElementById('prep-custom-plus')
+      ?.addEventListener('click', () => {
+        const i = input();
+
+        if (i) {
+          i.value = String(
+            Math.max(
+              1,
+              (Number(i.value) || 1) + 1
+            )
+          );
+        }
+
+        updateCustomBuyHint();
+      });
+
+    input()?.addEventListener(
+      'input',
+      updateCustomBuyHint
+    );
+
+    document
+      .getElementById('prep-custom-cancel')
+      ?.addEventListener('click', () => {
+        el.classList.add('hidden');
+      });
+
+    document
+      .getElementById('prep-custom-ok')
+      ?.addEventListener('click', () => {
+        const n = Math.floor(
+          Number(input()?.value) || 0
+        );
+
+        if (n < 1) return;
+
+        buyQty = n;
+        buyTargetId = itemId;
+
+        el.classList.add('hidden');
+
+        renderPrepScreen();
+      });
+  }
+
+  // Gắn item hiện tại vào hint
+  el.dataset.itemId = itemId;
+
+  const msg = document.getElementById(
+    'prep-custom-buy-msg'
+  );
+
+  const inputEl = document.getElementById(
+    'prep-custom-qty'
+  );
+
+  if (msg) {
+    msg.textContent =
+      `Mua bao nhiêu phần ${item.name}?`;
+  }
+
+  if (inputEl) {
+    inputEl.value = String(suggested);
+  }
+
+  updateCustomBuyHint();
+
+  el.classList.remove('hidden');
+}
+
+function updateCustomBuyHint() {
+  const el = document.getElementById(
+    'prep-custom-buy-dialog'
+  );
+
+  const itemId = el?.dataset.itemId;
+
+  const item = itemId
+    ? GAME_DATA.menu[itemId]
+    : null;
+
+  const n = Math.floor(
+    Number(
+      document.getElementById(
+        'prep-custom-qty'
+      )?.value
+    ) || 0
+  );
+
+  const hint = document.getElementById(
+    'prep-custom-hint'
+  );
+
+  if (!hint || !item) return;
+
+  const total =
+    item.cost * Math.max(0, n);
+
+  const state = getState();
+
+  const ok =
+    n >= 1 &&
+    total <= (Number(state.money) || 0);
+
+  hint.textContent =
+    n < 1
+      ? 'Nhập số ≥ 1'
+      : `Thành tiền ${formatMoney(total)}${
+          ok ? '' : ' — Không đủ tiền'
+        }`;
+
+  hint.style.color =
+    ok || n < 1
+      ? ''
+      : 'var(--danger)';
+}
+
 /**
  * Khởi tạo sự kiện màn chuẩn bị.
  */
@@ -296,13 +637,15 @@ export function initPrepScreen(options = {}) {
   const tabUpgradesBtn = document.getElementById('prep-tab-upgrades');
 
   tabIngredientsBtn?.addEventListener('click', () => {
-    activeTab = 'ingredients';
-    renderPrepScreen();
+  activeTab = 'ingredients';
+  buyTargetId = null;
+  renderPrepScreen();
   });
 
   tabUpgradesBtn?.addEventListener('click', () => {
-    activeTab = 'upgrades';
-    renderPrepScreen();
+  activeTab = 'upgrades';
+  buyTargetId = null;
+  renderPrepScreen();
   });
 
   // Uỷ quyền sự kiện mua hàng trong danh sách

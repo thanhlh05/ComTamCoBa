@@ -1521,3 +1521,77 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
   color: var(--ink-soft);
   font-weight: 600;
 }
+
+/* === M15: Mua 1 / 5 / 10 / Tùy chỉnh === */
+.prep-card.buying {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.prep-card.buying .card-action {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.buy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.buy-qty-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.buy-qty-chip {
+  flex: 1;
+  min-width: 44px;
+  min-height: 36px;
+  border: 2px solid rgba(90, 58, 34, 0.12);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.buy-qty-chip.active {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  border-color: var(--accent);
+  color: #fff;
+}
+.buy-qty-chip:active { transform: scale(0.96); }
+
+.buy-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: rgba(242, 140, 40, 0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.buy-preview strong { color: var(--ink); }
+
+.buy-panel-actions {
+  display: flex;
+  gap: 8px;
+}
+.buy-panel-actions .buy-btn {
+  flex: 2;
+  min-width: 0;
+}
+.buy-cancel-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid rgba(90, 58, 34, 0.15);
+  border-radius: 12px;
+  background: rgba(90, 58, 34, 0.06);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.buy-cancel-btn:active { transform: scale(0.96); }
