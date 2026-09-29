@@ -24,7 +24,9 @@ js/service.js    màn Bán hàng (khách, vỉ nướng, lắp đĩa, đồng h�
 js/pausemenu.js  menu tạm dừng (nút ☰): tiếp tục, âm thanh, đóng cửa sớm, thoát về Chuẩn bị
 js/summary.js    màn Tổng kết
 js/home.js       tab Quán (dashboard)
-js/revenue.js    tab Doanh thu (sổ doanh thu)
+js/revenue.js    tab Doanh thu (2 tab con: Doanh thu | Đánh giá — xem mục 21)
+js/reviews.js    logic tab Đánh giá: phân bố sao, danh sách, lọc, chọn câu bình luận theo lý do
+js/pricing.js    tự chỉnh giá bán từng món, tính nhãn cảnh báo và hệ số giá (mục 24)
 js/settings.js   tab Cài đặt (âm thanh, giờ mở, thời lượng, mã lưu)
 js/tutorial.js   hướng dẫn 4 thẻ + màn đặt tên quán
 js/nav.js        bottom nav: hiện/ẩn theo màn hình hiện tại
@@ -45,6 +47,9 @@ PROGRESS.md      nhật ký tiến độ
 - **Bottom nav** (`js/nav.js`) ẩn hoàn toàn khi đang ở màn Bán hàng, Start, Hướng dẫn, Đặt tên quán; hiện ở mọi màn còn lại (Quán, Chuẩn bị, Doanh thu, Cài đặt).
 - **Menu tạm dừng khi Bán hàng** (mục 19 GAME_DESIGN.md): màn Bán hàng không có nút thoát trực tiếp nào khác ngoài nút ☰ góc trên bên trái. Mở menu này phải dừng thật sự vòng lặp game (giống lúc tab bị ẩn), không chỉ che UI. "Đóng cửa sớm" là tính năng thật, có lưu kết quả; "Thoát về Chuẩn bị" là huỷ ngày, phải có hộp xác nhận và không được lưu/tính bất cứ gì của ngày đó.
 - **"ID sao lưu"** trong Cài đặt là chuỗi base64 mã hoá toàn bộ `localStorage` save, không phải ID tra cứu server. Đừng thiết kế nó như một tài khoản hay mã định danh cần backend.
+- **Giá bán** (mục 24 GAME_DESIGN.md): mỗi món có giá bán RIÊNG có thể chỉnh, nhưng hệ số ảnh hưởng khách đến (`heSoGia`) chỉ tính theo giá của món Cơm tấm — không tính trung bình phức tạp nhiều món. Công thức và các mốc nhãn (🟢/🟡/🔴) phải đúng số trong mục 24, không tự đặt số khác.
+- **Đánh giá** (mục 21): phân bố sao là bộ đếm tích lũy KHÔNG giới hạn, tách biệt với danh sách 30 đánh giá gần nhất hiện chi tiết (có giới hạn) và tách biệt với "Sao quán" ở mục 7 (chỉ tính 20 đánh giá gần nhất) — ba con số này không được gộp chung một biến.
+- **Khách quen** (mục 25): đếm theo LOẠI khách, không theo từng khách cá nhân cụ thể — không tạo hệ thống ID khách riêng lẻ ở mốc này.
 
 ## Yêu cầu riêng cho iOS
 - `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">`

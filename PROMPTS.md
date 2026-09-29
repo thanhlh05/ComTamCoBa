@@ -115,7 +115,80 @@ Nghiệm thu: xoá save, vào lại thấy đúng luồng Hướng dẫn → Đ�
 
 ---
 
-## M11 — Hoàn thiện (đổi số từ M6 cũ)
+M11/M12 vẫn tạm ngưng như quyết định trước. Tiếp tục với 5 mốc dưới đây (M13 → M17) — nhóm này nâng cấp trực tiếp core loop đang có (đánh giá, kho, mua hàng, giá bán, order), chưa cần hệ thống mới như mặt bằng/danh tiếng/chi nhánh. Xem mục 20 GAME_DESIGN.md để biết nhóm nào để dành sau.
+
+## M13 — Tab Đánh giá
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 21), PROGRESS.md. Làm MỐC 13 (js/reviews.js):
+1. Thêm 15 tên khách giả và 12-15 câu bình luận mẫu (theo 5 nhóm lý do ở mục 21) vào js/data.js.
+2. Mỗi khi một đơn hoàn tất (kể cả khách bỏ đi), xác định 1 lý do chính theo đúng thứ tự ưu tiên ở
+   mục 21, chọn ngẫu nhiên 1 tên khách + 1 câu bình luận khớp lý do đó, lưu vào danh sách đánh giá
+   (tối đa 30 bản ghi gần nhất, mới nhất lên đầu) VÀ tăng bộ đếm phân bố sao tích lũy (5 bộ đếm
+   1-5 sao, không giới hạn số lượng, không dùng chung biến với "Sao quán" mục 7).
+3. Trong tab Doanh thu, thêm 2 tab con "Doanh thu | Đánh giá" (không thêm tab thứ 5 ở bottom nav).
+   Tab Đánh giá: thanh phân bố 5★...1★ + tổng số đánh giá + điểm trung bình toàn thời gian; danh
+   sách 30 đánh giá gần nhất (tên khách + icon loại khách + sao + câu bình luận + món rút gọn);
+   3 chip lọc "Tất cả / 5★ / ≤2★".
+Nghiệm thu: phục vụ vài đơn với kết quả khác nhau (giao tốt, sai món, khách bỏ đi), vào tab Đánh
+giá thấy đúng số liệu và câu bình luận khớp lý do.
+```
+
+## M14 — Kho nguyên liệu: hao rõ ràng + đổ bỏ
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 22), PROGRESS.md. Làm MỐC 14 (sửa trong js/prep.js):
+1. Mỗi nguyên liệu trong tab Nguyên liệu hiện thêm 1 dòng cảnh báo hao dự kiến qua đêm theo đúng
+   luật ở mục 22 (dựa vào luật hao đã có ở mục 3): 🟠 "Qua đêm sẽ hao X phần" cho sườn/chả chưa có
+   Tủ lạnh; 🟢 "Không hao qua đêm" cho các trường hợp còn lại. Không hiện dòng này nếu tồn kho = 0.
+2. Thêm nút "Đổ bỏ" cạnh mỗi nguyên liệu: mở ô nhập số lượng (tối đa = tồn kho hiện tại), xác nhận
+   thì trừ thẳng khỏi tồn kho, không hoàn tiền.
+Nghiệm thu: mua sườn, không mua Tủ lạnh, qua ngày mới thấy đúng số hao đã cảnh báo trước đó; dùng
+nút Đổ bỏ trừ đúng số lượng chọn.
+```
+
+## M15 — Mua nguyên liệu theo số lượng tùy chọn
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 23), PROGRESS.md. Làm MỐC 15 (sửa trong js/prep.js):
+Thay nút "Mua lố 10" hiện tại bằng: 3 nút nhanh 1/5/10 + nút "Tùy chỉnh" mở ô nhập số lượng. Luôn
+hiện thành tiền (số lượng × giá vốn/phần) và tồn kho dự kiến sau khi mua trước khi bấm nút Mua
+cuối cùng. Vô hiệu nút Mua nếu thành tiền vượt tiền hiện có. Giá mỗi phần không đổi theo số lượng.
+Nghiệm thu: mua thử 1, 5, 10 và một số tùy chỉnh (ví dụ 37), tồn kho và tiền trừ đúng từng trường hợp.
+```
+
+## M16 — Tự chỉnh giá bán
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 24), PROGRESS.md. Làm MỐC 16 (js/pricing.js, nối vào js/prep.js,
+js/service.js và công thức spawn khách ở mục 4):
+1. Mỗi món trong tab Nguyên liệu/Nâng cấp (chỗ hiện giá bán) có thêm ô chỉnh giá, bước 1.000đ,
+   giới hạn 50%-200% giá bán gốc ở mục 3. Hiện nhãn cảnh báo đúng theo 4 mốc ở mục 24 (🟢/không
+   nhãn/🟡/🔴), tính riêng theo giá gốc của từng món.
+2. Tính `p` theo giá Cơm tấm hiện tại ÷ 15.000, áp dụng công thức `heSoGia` đúng như mục 24 vào
+   công thức khoảng cách khách ở mục 4.
+3. Khi chấm sao 1 đơn (mục 7): nếu có món nào trong đơn có giá hiện tại > 1.3 lần giá gốc riêng
+   của nó, trừ thêm 1 sao vào kết quả đã tính (tối thiểu 1 sao).
+4. Đổi giá chỉ áp dụng từ ngày bán tiếp theo, không đổi giữa chừng ngày đang bán.
+Nghiệm thu: hạ giá Cơm tấm xuống 70%, thấy khách đến dày hơn rõ rệt ở ngày tiếp theo; tăng giá lên
+trên 140%, thấy nhãn 🔴 hiện đúng và sao trung bình giảm.
+```
+
+## M17 — Order bằng chữ + câu thoại + khách quen cơ bản
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 25), PROGRESS.md. Làm MỐC 17 (sửa trong js/service.js, thêm dữ
+liệu vào js/data.js):
+1. Thay hiển thị order từ dãy icon sang 1 dòng chữ ngắn (tên món chính trước, món phụ sau, dạng
+   "Cơm sườn bì + trứng"), giữ 1 icon nhỏ đại diện phía trước dòng chữ.
+2. Thêm 2-3 câu thoại mẫu cho mỗi loại khách (mục 25) vào data.js, hiện dạng bong bóng thoại nhỏ
+   phía trên đầu khách khi khách vừa xuất hiện, tự ẩn sau vài giây hoặc khi khách được chọn.
+3. Thêm bộ đếm riêng cho mỗi loại khách: số lần loại đó được phục vụ đạt từ 4 sao trở lên (lưu
+   trong state, không giới hạn). Từ lần thứ 5 trở đi, mỗi lượt loại khách đó xuất hiện có 20% cơ
+   hội là "khách quen": thêm nhãn nhỏ "Khách quen" trên bong bóng đơn, kiên nhẫn +10%, tiền boa
+   +5 điểm phần trăm so với mục 4.
+Nghiệm thu: order hiện đúng dạng chữ; câu thoại xuất hiện khi khách tới; sau khi phục vụ tốt 5 lần
+một loại khách, bắt đầu thấy nhãn "Khách quen" xuất hiện ngẫu nhiên ở loại đó.
+```
+
+---
+
+## M11 — Hoàn thiện (đổi số từ M6 cũ, vẫn PAUSED tới khi xong M17)
 ```
 Đọc AGENTS.md, GAME_DESIGN.md, PROGRESS.md. Làm MỐC 11:
 1. Sự kiện ngẫu nhiên (mục 9), hiển thị thông báo đầu ngày.
@@ -135,8 +208,10 @@ Không sửa gameplay.
 
 ---
 
-## Việc để dành sau (chưa lên prompt, xem GAME_DESIGN.md mục 19)
-Tab Đánh giá, Thành tựu, Nhiệm vụ ngày, Sổ tay khách hàng — làm sau khi M6-M10 đã ổn định.
+## Việc để dành sau (chưa lên prompt, xem GAME_DESIGN.md mục 20)
+Nhiệm vụ ngày/tuần, Thành tựu, Sổ tay khách, Streak, Mặt bằng/phương tiện, Danh tiếng, Khách quen
+nâng cao, Online order, Sự kiện lịch VN, Chi nhánh/thương hiệu — làm sau khi M13-M17 đã ổn định
+và chơi thử thấy thật sự cần, không lập sẵn lộ trình chi tiết từ bây giờ.
 
 ---
 

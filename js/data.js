@@ -98,6 +98,51 @@ export const GAME_DATA = {
       assistant: '👩‍🍳',
     },
   },
+    // --- M13: Đánh giá (mục 21) ---
+  reviewNames: [
+    'Nguyễn Minh', 'Trần Quốc Anh', 'Lê Hoàng Nam', 'Phạm Gia Hân', 'Mai Thảo',
+    'Đỗ Thanh Tùng', 'Vũ Ngọc Lan', 'Bùi Anh Khoa', 'Hoàng Bảo Trân', 'Phan Đức Huy',
+    'Trương Mỹ Linh', 'Đặng Quang Vinh', 'Ngô Thu Hà', 'Lý Gia Bảo', 'Đinh Nhật Nam',
+  ],
+  reviewComments: {
+    left: [
+      'Trời ơi, đơn đâu rồi?',
+      'Chờ lâu quá, thôi con đi chỗ khác.',
+      'Hết kiên nhẫn rồi {shop} ơi!',
+    ],
+    wrongMissing: [
+      '{shop} ơi con gọi thêm {item} mà đâu rồi?',
+      'Thiếu {item} rồi, lần sau kiểm tra lại nha.',
+      'Không thấy {item} trong phần của con.',
+    ],
+    wrongExtra: [
+      'Sao lại có thêm {item}? Con không gọi món này.',
+      'Phần dư {item} rồi {shop} ơi.',
+    ],
+    wrong: [
+      'Không đúng đơn mình gọi luôn.',
+      'Lần sau kiểm tra lại đơn giúp con nha.',
+    ],
+    burn: [
+      'Cơm ngon mà sườn hơi khét.',
+      'Sườn cháy nhẹ, ăn vẫn được nhưng tiếc.',
+      'Sườn hơi đen rồi {shop} ơi.',
+    ],
+    expensive: [
+      'Ngon nhưng hơi mắc.',
+      'Đồ ổn mà giá cao so với chỗ khác.',
+    ],
+    slow: [
+      'Đúng món nhưng chờ hơi lâu.',
+      'Ngon, lần sau giao nhanh hơn nha.',
+    ],
+    good: [
+      'Sườn nướng ngon nha, phục vụ nhanh!',
+      'Ngon, mai quay lại!',
+      '{shop} làm cơm tấm đỉnh thật!',
+      'Đúng gu, sẽ giới thiệu bạn bè.',
+    ],
+  },
 };
 
 export const ASSETS = GAME_DATA.assets.placeholder;

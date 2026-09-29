@@ -2,6 +2,7 @@ import { getState, saveState, recordRating, setLastSummary, backupDayBeforeServi
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import { scoreOrder } from './scoring.js';
+import { pushReview, resolveReviewReason } from './reviews.js';
 import {
   initGrill,
   updateGrill,
@@ -175,6 +176,22 @@ function deliverPlate() {
   state.money += result.totalEarned;
   recordRating(result.stars);
 
+  const reason = resolveReviewReason({
+    left: false,
+    errors: result.errors,
+    isSlightBurn: result.isSlightBurn,
+    patiencePct: result.patiencePct,
+    priceTooHigh: false,
+  });
+  pushReview({
+    stars: result.stars,
+    reason,
+    customerType: customer.type,
+    orderIds: customer.order,
+    missing: result.missing || [],
+    extra: result.extra || [],
+  });
+
   dayStats.servedCount++;
   dayStats.revenue += result.baseEarned;
   dayStats.tips += result.tipEarned;
@@ -213,9 +230,15 @@ function updateCustomers(dt) {
     c.patience -= dt;
     if (c.patience <= 0) {
       recordRating(1);
+      pushReview({
+        stars: 1,
+        reason: 'left',
+        customerType: c.type,
+        orderIds: c.order,
+      });
       dayStats.leaveCount++;
       queueChanged = true;
-      showServiceToast(`Khách ${c.type.label} hết kiên nhẫn bỏ đi! (-1⭐)`);
+      showServiceToast(`Khách ${c.type.label} hết kiên nhẫn bỏ đi! (đánh giá 1⭐)`);
       return false;
     }
     return true;

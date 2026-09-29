@@ -210,10 +210,74 @@ Thay đồng hồ đếm giây (`119s`) bằng đồng hồ giờ trong ngày, t
 
 ## 20. Việc để dành sau (backlog, chưa lên prompt ngay)
 
-Làm sau khi 4 tab chính + đồng hồ ảo + cài đặt đã chạy ổn định:
+Nhóm này để sau khi M13-M17 (mục 21-25) đã chạy ổn định và chơi thử thấy thật sự cần. **Chưa chốt số liệu**, chỉ ghi tên để nhớ hướng, tránh lập sẵn "lộ trình 30 mốc" khi chưa biết game thật sự thiếu gì:
 
-- **Tab ⭐ Đánh giá**: phân bố số sao + vài câu bình luận mẫu gắn theo mức sao (mục 7).
-- **Thành tựu**: mốc như "phục vụ khách đầu tiên", "đạt 5.0 sao", "kiếm 500.000đ".
-- **Nhiệm vụ ngày**: 1-2 nhiệm vụ nhỏ mỗi ngày, thưởng tiền nhỏ.
-- **Sổ tay khách hàng**: mô tả từng loại khách, mở khoá dần theo ngày.
-- **Không làm "Level quán"**: hệ thống ngày + tiền + sao + nâng cấp + khách mới đã đủ tạo cảm giác tiến triển, thêm level dễ gây rối mà chưa rõ giá trị.
+- Nhiệm vụ ngày/tuần, Thành tựu, Sổ tay khách hàng, Streak (chuỗi ngày chơi) — nhóm giữ chân ngắn hạn, có thể là mốc tiếp theo sau M17 nếu vẫn muốn làm thêm.
+- Mặt bằng/phương tiện theo bậc (xe đẩy → xe lớn → quán nhỏ → mặt tiền), Danh tiếng (khác Sao — tích lũy dài hạn, không giảm nhanh như sao) — progression trung-dài hạn.
+- Khách quen nâng cao (nhớ theo từng khách cụ thể, không chỉ theo loại khách như mục 25), đơn online/Shipper đặt trước, đơn đặt đoàn.
+- Sự kiện theo lịch Việt Nam (Tết, mùa mưa, World Cup...) — mở rộng thêm cho mục 9.
+- Chi nhánh, thương hiệu, "câu chuyện Cô Ba" theo mốc ngày, New Game+.
+- **Rõ ràng KHÔNG làm** (cả nguồn tham khảo đều đồng ý): thuế/điện/nước/gas riêng lẻ, bảo hiểm thực phẩm, thanh tra VSATTP định kỳ, mất trộm/cướp, mệt mỏi nhân vật, vay ngân hàng có lãi, cơ chế may rủi trả phí. Những thứ này biến game bán cơm vui vẻ thành game kế toán/rủi ro, không hợp quy mô dự án.
+
+
+## 21. Tab ⭐ Đánh giá
+
+- Vị trí: thêm vào tab Doanh thu dưới dạng 2 tab con "Doanh thu | Đánh giá" (không tách thành tab thứ 5 ở bottom nav, để tránh 5 tab chật trên iPhone).
+- **Phân bố sao (tích lũy toàn bộ, không giới hạn)**: 5 bộ đếm số lượng đánh giá 1-5 sao, tăng dần mỗi khi có đơn hoàn tất (kể cả khách bỏ đi = 1 sao). Hiện dạng thanh ngang (5★...1★) + tổng số đánh giá + điểm trung bình toàn thời gian (khác với "Sao quán" ở mục 7 vốn chỉ tính 20 đánh giá gần nhất).
+- **Danh sách đánh giá gần đây**: lưu tối đa 30 đánh giá gần nhất (mới nhất trên đầu) để không phình localStorage. Mỗi dòng gồm: tên khách giả + icon loại khách, số sao, 1 câu bình luận, món đã gọi rút gọn (dùng chữ theo mục 25).
+- **Lọc**: 3 nút chip "Tất cả / 5★ / ≤2★" (đơn giản hơn bản đề xuất ban đầu, đủ dùng).
+- **Tên khách giả**: chọn ngẫu nhiên từ danh sách 15 tên Việt Nam đặt trong `data.js` (ví dụ: Nguyễn Minh, Trần Quốc Anh, Lê Hoàng Nam, Phạm Gia Hân, Mai Thảo, Đỗ Thanh Tùng, Vũ Ngọc Lan, Bùi Anh Khoa, Hoàng Bảo Trân, Phan Đức Huy, Trương Mỹ Linh, Đặng Quang Vinh, Ngô Thu Hà, Lý Gia Bảo, Đinh Nhật Nam) — không dùng tên người thật.
+- **Câu bình luận theo lý do** — mỗi đơn khi hoàn tất được gắn 1 lý do chính theo thứ tự ưu tiên: khách bỏ đi > sai/thiếu món > sườn hơi cháy > giá quá mắc (mục 24) > kiên nhẫn thấp lúc giao > mặc định (ổn). Mỗi lý do có 2-3 câu mẫu đặt sẵn trong `data.js` (khoảng 12-15 câu tổng cộng), ví dụ:
+  - Bỏ đi: "Trời ơi, đơn đâu rồi?" / "Chờ lâu quá, thôi con đi chỗ khác."
+  - Sai/thiếu món: "Cô ơi con gọi thêm trứng mà đâu rồi?"
+  - Sườn hơi cháy: "Cơm ngon mà sườn hơi khét."
+  - Giá mắc: "Ngon nhưng hơi mắc."
+  - Ổn/tốt: "Sườn nướng ngon nha, phục vụ nhanh!" / "Ngon, mai quay lại!"
+- Không làm review generator phức tạp nhiều biến — mỗi đơn chỉ chọn 1 lý do chính, tránh phải soạn hàng trăm tổ hợp câu.
+
+## 22. Kho nguyên liệu: hao rõ ràng + đổ bỏ
+
+Không làm hệ thống hạn dùng theo từng lô hàng (phức tạp, cần theo dõi ngày mua từng đợt) — tận dụng luật hao đã có ở mục 3, chỉ làm rõ hơn cho người chơi thấy và cho họ chủ động xử lý:
+
+- Ở tab Chuẩn bị, mỗi nguyên liệu hiện thêm dòng cảnh báo hao dự kiến qua đêm, tính từ tồn kho hiện tại và luật ở mục 3:
+  - Còn tồn kho, chưa có Tủ lạnh, là sườn hoặc chả: 🟠 "Qua đêm sẽ hao X phần" (X = làm tròn xuống 50% tồn kho hiện tại).
+  - Còn tồn kho, đã có Tủ lạnh, hoặc là món khác không bị hao: 🟢 "Không hao qua đêm".
+  - Tồn kho = 0: không hiện dòng này.
+- Thêm nút **"Đổ bỏ"** cạnh mỗi nguyên liệu: mở ô nhập số lượng muốn đổ (tối đa = tồn kho hiện tại), xác nhận thì trừ thẳng khỏi tồn kho, không hoàn tiền. Dùng khi người chơi biết chắc sẽ ế và muốn chủ động dọn trước thay vì để hao tự động.
+
+## 23. Mua nguyên liệu theo số lượng tùy chọn
+
+Thay nút "Mua lố 10" cố định bằng chọn số lượng:
+
+- 3 nút nhanh: **1 / 5 / 10**, cộng nút **"Tùy chỉnh"** mở ô nhập số.
+- Hiện ngay thành tiền = số lượng × giá vốn/phần, và tồn kho dự kiến sau khi mua.
+- Nút "Mua" bị vô hiệu nếu thành tiền vượt quá tiền hiện có.
+- Giá mỗi phần giữ nguyên theo mục 3 dù mua số lượng bao nhiêu (không làm chiết khấu số lượng, giữ đơn giản).
+- Chưa cần trần kho tối đa ở mốc này (để dành cho hệ mặt bằng ở backlog mục 20 nếu sau này cần).
+
+## 24. Tự chỉnh giá bán
+
+Đây là hệ thống mới lớn nhất trong đợt này. Dùng **giá đại diện của món Cơm tấm** (món bắt buộc có trong mọi đơn) để tính ảnh hưởng chung, tránh phải tính riêng cho từng món:
+
+- Ở tab Chuẩn bị, mỗi món trong mục 3 có thêm ô chỉnh giá bán, bước 1.000đ, giới hạn từ 50% đến 200% giá bán gốc trong bảng mục 3 (không cho chỉnh ra ngoài khung này).
+- Gọi `p = giá bán hiện tại của Cơm tấm ÷ 15.000` (15.000 là giá gốc Cơm tấm ở mục 3).
+- **Nhãn cảnh báo** hiện cạnh mỗi món đang chỉnh giá (so giá món đó với giá gốc riêng của nó, không phải p chung):
+  - tỉ lệ ≤ 0.7: 🟢 "Giá mềm"
+  - 0.7 – 1.15: không hiện nhãn (giá bình thường)
+  - 1.15 – 1.4: 🟡 "Hơi mắc"
+  - > 1.4: 🔴 "Quá mắc"
+- **Ảnh hưởng số khách đến** (áp dụng vào công thức khoảng cách khách ở mục 4): nhân thêm hệ số giá `heSoGia = clamp(1 + (1 - p) × 0.6, 0.6, 1.3)`. Ví dụ p=1 (giá gốc) → hệ số 1 (không đổi); p=0.7 → 1.18 (đông hơn); p=0.5 → 1.3 (chặn trần, đông tối đa); p=1.4 → 0.76 (thưa hơn); p≥1.7 → 0.6 (chặn sàn, thưa tối đa).
+- **Ảnh hưởng sao**: nếu giá món nào đó trong đơn có tỉ lệ so với giá gốc riêng > 1.3, thì trừ thêm 1 sao vào kết quả đã tính ở mục 7 (tối thiểu 1 sao, không trừ xuống dưới 1). Giá rẻ hơn giá gốc KHÔNG được cộng thêm sao.
+- Lợi nhuận/phần vẫn tính đơn giản: giá bán hiện tại − giá vốn (mục 3), không đổi công thức.
+- Đổi giá chỉ áp dụng từ ngày bán tiếp theo, không đổi giữa chừng ngày đang bán (giống luật ở mục 15).
+
+## 25. Order bằng chữ + câu thoại + khách quen cơ bản
+
+- **Đổi cách hiển thị order**: thay dãy icon món bằng 1 dòng chữ ngắn liệt kê tên món chính trước, món phụ sau, ví dụ "Cơm sườn bì + trứng", "Cơm sườn + trà đá". Giữ 1 icon nhỏ đại diện (sườn nếu có, không thì cơm) đặt trước dòng chữ.
+- **Câu thoại khi khách xuất hiện**: mỗi loại khách (mục 4) có 2-3 câu thoại mẫu đặt trong `data.js`, hiện dạng bong bóng thoại nhỏ phía trên đầu khách khi khách vừa tới, ví dụ:
+  - Học sinh: "Cô ơi cho con cơm sườn bì, thêm miếng trứng nha!"
+  - Dân văn phòng: "Cô cho con cơm sườn chả, thêm trà đá."
+  - Bác tài xế: "Cô làm con phần sườn nhiều cơm nha, lẹ giúp cô!"
+  - Khách du lịch: "Cho em một phần cơm sườn với trà đá ạ!"
+  - Shipper: "Đơn giao gấp giùm em, cơm sườn 2 phần!"
+- **Khách quen (bản đơn giản, theo loại khách chứ không theo từng khách cá nhân)**: đếm số lần mỗi loại khách được phục vụ đạt từ 4 sao trở lên (bộ đếm riêng cho từng loại, lưu trong state, không giới hạn). Từ lần thứ 5 trở đi, mỗi lượt loại khách đó xuất hiện có 20% cơ hội là "khách quen": thêm nhãn nhỏ "Khách quen" trên bong bóng đơn, kiên nhẫn +10%, tiền boa +5 điểm phần trăm so với mục 4. Không cần lưu ID từng khách cụ thể, giữ đơn giản.

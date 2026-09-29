@@ -19,6 +19,9 @@ export const initialState = {
   upgrades: {},
   lastSummary: null,
   revenueHistory: [], // tối đa 30 bản ghi gần nhất (mục 17)
+  // M13 — Đánh giá (tách biệt Sao quán mục 7)
+  starCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, // tích lũy không giới hạn
+  reviews: [], // tối đa 30 bản gần nhất
   loanUsed: false,
   soundEnabled: true, // Tên quán (mục 13) và trạng thái tutorial (mục 18)
   shopName: '',
@@ -62,6 +65,14 @@ export function loadState() {
       upgrades: { ...(parsed.upgrades || {}) },
       revenueHistory: Array.isArray(parsed.revenueHistory) ? parsed.revenueHistory : [],
       guideSeen: Boolean(parsed.guideSeen) || Boolean(parsed.tutorialDone),
+            starCounts: {
+        1: Number(parsed.starCounts?.[1]) || 0,
+        2: Number(parsed.starCounts?.[2]) || 0,
+        3: Number(parsed.starCounts?.[3]) || 0,
+        4: Number(parsed.starCounts?.[4]) || 0,
+        5: Number(parsed.starCounts?.[5]) || 0,
+      },
+      reviews: Array.isArray(parsed.reviews) ? parsed.reviews.slice(0, 30) : [],
     };
     return activeState;
   } catch (error) {
