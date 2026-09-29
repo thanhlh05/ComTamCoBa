@@ -18,6 +18,7 @@ export const initialState = {
   },
   upgrades: {},
   lastSummary: null,
+  revenueHistory: [], // tối đa 30 bản ghi gần nhất (mục 17)
   loanUsed: false,
   soundEnabled: true,
   // Tên quán (mục 13) và trạng thái tutorial (mục 18)
@@ -60,6 +61,7 @@ export function loadState() {
         ...(parsed.inventory || {}),
       },
       upgrades: { ...(parsed.upgrades || {}) },
+      revenueHistory: Array.isArray(parsed.revenueHistory) ? parsed.revenueHistory : [],
     };
     return activeState;
   } catch (error) {
@@ -68,7 +70,6 @@ export function loadState() {
     return activeState;
   }
 }
-
 
 export function getState() {
   if (!activeState) {
@@ -187,6 +188,25 @@ export function setLastSummary(summaryData, state = getState()) {
 }
 
 /**
+ * Thêm 1 bản ghi vào sổ doanh thu, giữ tối đa 30 bản gần nhất.
+ */
+export function pushRevenueRecord(record, state = getState()) {
+  if (!Array.isArray(state.revenueHistory)) state.revenueHistory = [];
+
+  // Tránh ghi trùng cùng 1 ngày
+  state.revenueHistory = state.revenueHistory.filter((r) => r.day !== record.day);
+
+  state.revenueHistory.push(record);
+
+  while (state.revenueHistory.length > 30) {
+    state.revenueHistory.shift();
+  }
+
+  saveState(state);
+  return state.revenueHistory;
+}
+
+/**
  * Tính tiền thuê mặt bằng theo mục 2.
  */
 export function calcRent(day = 1) {
@@ -251,4 +271,3 @@ export function restoreDayBackup(state = getState()) {
   }
   return state;
 }
-

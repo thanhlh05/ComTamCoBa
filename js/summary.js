@@ -4,6 +4,7 @@ import {
   startNewDay,
   calcRent,
   applyRentAndLoan,
+  pushRevenueRecord,
 } from './state.js';
 import { formatMoney, formatStar } from './ui.js';
 
@@ -42,7 +43,7 @@ function renderSummary() {
   if (hudDayEl) hudDayEl.textContent = `Ngày ${data.day || 1}`;
 
   // Áp dụng trừ thuê + xử lý vay / game over (chỉ 1 lần khi vào màn)
-  if (!state._rentAppliedForDay || state._rentAppliedForDay !== data.day) {
+    if (!state._rentAppliedForDay || state._rentAppliedForDay !== data.day) {
     const result = applyRentAndLoan(state);
     state._rentAppliedForDay = data.day;
     saveState(state);
@@ -52,6 +53,18 @@ function renderSummary() {
     data.loanGiven = result.loanGiven;
     data.gameOver = result.gameOver;
     data.profit = (data.revenue || 0) + (data.tips || 0) - result.rent;
+
+    // Lưu vào sổ doanh thu (1 lần / ngày)
+    pushRevenueRecord({
+      day: data.day,
+      revenue: data.revenue || 0,
+      tips: data.tips || 0,
+      rent: result.rent,
+      profit: data.profit,
+      servedCount: data.servedCount || 0,
+      leaveCount: data.leaveCount || 0,
+      star: data.endStar || data.currentStar || state.star || 4.0,
+    });
   }
 
   const container = document.getElementById('summary-content');

@@ -25,7 +25,7 @@ import { initTutorial, showTutorialScreen, needsTutorial } from './tutorial.js';
 import { initNav, updateNav } from './nav.js';
 import { initHomeScreen, renderHomeScreen } from './home.js';
 import { initSettingsScreen, renderSettingsScreen } from './settings.js';
-
+import { initRevenueScreen, renderRevenueScreen } from './revenue.js';
 // Danh sách màn hình hợp lệ
 const VALID_SCREENS = ['title', 'tutorial', 'home', 'prep', 'service', 'summary', 'revenue', 'settings'];
 
@@ -68,6 +68,9 @@ export function showScreen(name) {
   } else if (nextName === 'summary') {
     stopServiceLoop();
     showSummaryScreen();
+  } else if (nextName === 'revenue') {
+    stopServiceLoop();
+    renderRevenueScreen();
   } else if (nextName === 'settings') {
     renderSettingsScreen();
   } else {
@@ -102,6 +105,7 @@ function initializeGame() {
   registerServiceFunctions(stopServiceLoop, startServiceLoop, finishDay);
   initPauseMenu();
   initSummaryScreen();
+  initRevenueScreen();
   initSettingsScreen();
 
   // Nút Start → tutorial (lần đầu) hoặc thẳng home (người chơi cũ)
