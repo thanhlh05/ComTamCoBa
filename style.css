@@ -114,7 +114,7 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
 .tab-bar { display: flex; background: rgba(90, 58, 34, 0.08); border-radius: 14px; padding: 4px; gap: 6px; }
 .tab-btn {
   flex: 1; min-height: 42px; border: 0; border-radius: 10px;
-  background: transparent; color: var(--ink-soft); font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  background: transparent; color: var(--ink-soft); font-weight: 700; font-size: 0.9rem; cursor: pointer;
 }
 .tab-btn:active { transform: scale(0.98); }
 .tab-btn.active { background: #fff; color: var(--ink); box-shadow: 0 3px 8px rgba(90, 58, 34, 0.12); }
@@ -1745,4 +1745,163 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: #fff;
+}
+/* === M19: Tồn kho + viền xanh gợi ý === */
+#ing-buttons button[data-ing] {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+#ing-buttons button[data-ing].ing-needed {
+  border: 2px solid #6aa84f !important;
+  box-shadow: 0 0 0 2px rgba(106, 168, 79, 0.35);
+  background: rgba(106, 168, 79, 0.12);
+}
+
+/* === M20: Dĩa / Hộp / Bọc === */
+.serve-type-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.serve-type-btn {
+  flex: 1;
+  min-height: 40px;
+  border: 2px solid rgba(90, 58, 34, 0.15);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.serve-type-btn.active {
+  border-color: var(--accent);
+  background: rgba(242, 140, 40, 0.15);
+  color: var(--accent-dark);
+}
+.serve-type-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.serve-type-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+#ing-buttons button[data-ing].serve-locked {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.order-serve-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* M21 — nút nước mắm hơi hẹp cho vừa hàng */
+#ing-buttons button[data-ing="mam_cay"],
+#ing-buttons button[data-ing="mam_thuong"] {
+  font-size: 0.68rem;
+}
+
+/* === M22: Báo hết món === */
+.service-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+#btn-out-of-stock {
+  flex: 1;
+  min-height: 42px;
+  border: 1px solid rgba(90, 58, 34, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+#btn-out-of-stock:active {
+  transform: scale(0.97);
+}
+#btn-out-of-stock:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pricing-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(33, 22, 17, 0.98), rgba(21, 14, 10, 0.96));
+  border: 1px solid rgba(255, 198, 82, 0.2);
+  border-radius: 18px;
+  padding: 10px 8px;
+  color: #f7f1e3;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.pricing-row {
+  display: grid;
+  grid-template-columns: 1.15fr 0.8fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255, 198, 82, 0.12);
+}
+.pricing-row:last-child { border-bottom: 0; }
+.pricing-header {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f3c76d;
+  text-transform: uppercase;
+}
+.pricing-name, .pricing-active, .pricing-input-label, .pricing-meta {
+  min-width: 0;
+}
+.pricing-name { font-weight: 700; color: #fff7d9; }
+.pricing-active { font-size: 0.8rem; font-weight: 700; color: #f6e7b7; }
+.pricing-input-wrap {
+  display: flex;
+  justify-content: center;
+}
+.pricing-input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(243, 199, 109, 0.55);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 8px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pricing-input:focus {
+  border-color: #f3c76d;
+  box-shadow: 0 0 0 3px rgba(243, 199, 109, 0.15);
+}
+.pricing-input::-webkit-outer-spin-button,
+.pricing-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pricing-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.pricing-delay {
+  grid-column: 1 / -1;
+  font-size: 0.68rem;
+  color: #f3c76d;
+  font-weight: 700;
+  padding-top: 2px;
+}
+.price-free {
+  background: rgba(86, 189, 117, 0.15);
+  color: #8ae0a4;
+  border-radius: 999px;
+  padding: 2px 6px;
 }

@@ -12,6 +12,14 @@ import {
   popTrayRib,
   getTray,
 } from './grill.js';
+import {
+  rollServeType,
+  serveTypeIcon,
+  serveTypeLabel,
+  isCorrectContainer,
+  serveTypeErrorCount,
+  SERVE_TAKEAWAY,
+} from './servetype.js';
 
 let isLoopRunning = false;
 let animationFrameId = null;
@@ -25,8 +33,11 @@ let spawnTimer = 1.0;
 let customers = [];
 let selectedCustomerId = null;
 let currentPlate = [];
+let plateContainer = null; // 'plate' | 'box' | null
+let plateBagged = false;
 let dayStats = null;
 let assistantTimer = 0; // Chị Hai
+let isClosing = false; // M23 — đang đóng cửa, không spawn thêm
 
 // Đồng hồ giờ ảo (mục 15)
 let virtualMinutes = 0;    // phút ảo hiện tại (tính từ giờ mở)
@@ -84,6 +95,13 @@ function spawnCustomer() {
   const shuffled = [...availableExtras].sort(() => 0.5 - Math.random());
   const order = ['com', ...shuffled.slice(0, extraCount)];
 
+  // M21 — ~55% khách gọi kèm nước mắm (cay hoặc thường)
+  const sauceChance = GAME_DATA.customers.fishSauceChance ?? 0.55;
+  if (Math.random() < sauceChance) {
+    order.push(Math.random() < 0.5 ? 'mam_cay' : 'mam_thuong');
+  }
+
+  const serveType = rollServeType();
   // Khách quen: từ lần phục vụ ≥4★ thứ 5 trở đi, 20% ra khách quen
   const goodCount = Number(state.typeServeGood?.[type.id]) || 0;
   const isRegular = goodCount >= 5 && Math.random() < 0.2;
@@ -99,16 +117,18 @@ function spawnCustomer() {
     id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     type,
     order,
+    serveType,
     maxPatience,
     patience: maxPatience,
     isRegular,
-    tipBonus: isRegular ? 0.05 : 0, // +5 điểm % boa
+    tipBonus: isRegular ? 0.05 : 0,
     speech: line,
-    speechUntil: line ? performance.now() + 4000 : 0, // hiện ~4s
+    speechUntil: line ? performance.now() + 4000 : 0,
   };
   customers.push(customer);
   if (!selectedCustomerId) selectedCustomerId = customer.id;
   renderCustomers();
+  updateServeTypeBar();
 }
 
 function renderCustomers() {
@@ -116,6 +136,8 @@ function renderCustomers() {
   if (!rowEl) return;
   if (customers.length === 0) {
     rowEl.innerHTML = '<span class="queue-empty">Chưa có khách nào đang đợi...</span>';
+    updateIngredientButtons();
+    updateServeTypeBar();
     return;
   }
   const now = performance.now();
@@ -124,10 +146,10 @@ function renderCustomers() {
       const isSelected = c.id === selectedCustomerId;
       const pct = Math.max(0, (c.patience / c.maxPatience) * 100);
       const colorClass = pct > 50 ? 'high' : pct > 20 ? 'med' : 'low';
-      // Icon đại diện: sườn nếu có, không thì cơm
       const leadId = c.order.includes('suon') ? 'suon' : 'com';
       const leadIcon = ASSETS[leadId] || '🍚';
       const orderText = formatOrderShort(c.order);
+      const serveIcon = serveTypeIcon(c.serveType);
       const showSpeech = c.speech && c.speechUntil && now < c.speechUntil && !isSelected;
       const regularTag = c.isRegular
         ? `<span class="regular-tag">Khách quen</span>`
@@ -137,6 +159,7 @@ function renderCustomers() {
       <div class="customer-card ${isSelected ? 'selected' : ''} ${c.isRegular ? 'regular' : ''}" data-id="${c.id}" role="button">
         ${showSpeech ? `<div class="speech-bubble">${c.speech}</div>` : ''}
         <div class="order-bubble">
+          <span class="order-serve-icon" title="${serveTypeLabel(c.serveType)}">${serveIcon}</span>
           <span class="order-lead-icon">${leadIcon}</span>
           <span class="order-text">${orderText}</span>
         </div>
@@ -147,6 +170,69 @@ function renderCustomers() {
       </div>`;
     })
     .join('');
+  updateIngredientButtons();
+  updateServeTypeBar();
+}
+
+function resetPlateServeState() {
+  plateContainer = null;
+  plateBagged = false;
+  updateServeTypeBar();
+}
+
+function updateServeTypeBar() {
+  const customer = customers.find((c) => c.id === selectedCustomerId);
+  const btnPlate = document.getElementById('btn-container-plate');
+  const btnBox = document.getElementById('btn-container-box');
+  const btnBag = document.getElementById('btn-bag');
+
+  const hasCustomer = Boolean(customer);
+  if (btnPlate) {
+    btnPlate.disabled = !hasCustomer;
+    btnPlate.classList.toggle('active', plateContainer === 'plate');
+  }
+  if (btnBox) {
+    btnBox.disabled = !hasCustomer;
+    btnBox.classList.toggle('active', plateContainer === 'box');
+  }
+  if (btnBag) {
+    // Bọc chỉ bật khi đã chọn Hộp + khách mang đi
+    const canBag =
+      hasCustomer &&
+      plateContainer === 'box' &&
+      customer.serveType === SERVE_TAKEAWAY;
+    btnBag.disabled = !canBag;
+    btnBag.classList.toggle('active', plateBagged);
+  }
+
+  // Khóa nút món khi chưa chọn dĩa/hộp đúng hướng dẫn
+  const locked = !plateContainer;
+  document.querySelectorAll('#ing-buttons button[data-ing]').forEach((btn) => {
+    btn.disabled = locked;
+    btn.classList.toggle('serve-locked', locked);
+  });
+}
+
+function handleServeAction(action) {
+  const customer = customers.find((c) => c.id === selectedCustomerId);
+  if (!customer) {
+    showServiceToast('Chọn khách trước!');
+    return;
+  }
+  if (action === 'plate') {
+    plateContainer = 'plate';
+    plateBagged = false;
+  } else if (action === 'box') {
+    plateContainer = 'box';
+    plateBagged = false;
+  } else if (action === 'bag') {
+    if (plateContainer !== 'box' || customer.serveType !== SERVE_TAKEAWAY) {
+      showServiceToast('Chỉ bọc khi khách mang đi và đã chọn Hộp!');
+      return;
+    }
+    plateBagged = true;
+  }
+  updateServeTypeBar();
 }
 
 function renderPlate() {
@@ -161,9 +247,69 @@ function renderPlate() {
       return `<span class="plate-chip">${icon}${tag}</span>`;
     }).join('');
   }
+  updateIngredientButtons();
+}
+
+/** Đếm món còn thiếu trên đĩa so với order khách đang chọn */
+function getNeededCounts() {
+  const customer = customers.find((c) => c.id === selectedCustomerId);
+  if (!customer) return {};
+  const need = {};
+  customer.order.forEach((id) => {
+    need[id] = (need[id] || 0) + 1;
+  });
+  currentPlate.forEach((p) => {
+    if (need[p.id]) need[p.id] -= 1;
+  });
+  // Chỉ giữ món còn thiếu > 0
+  Object.keys(need).forEach((k) => {
+    if (need[k] <= 0) delete need[k];
+  });
+  return need;
+}
+
+/** Cập nhật nhãn tồn kho + viền xanh trên nút món (mục 27) */
+function updateIngredientButtons() {
+  const state = getState();
+  const need = getNeededCounts();
+  const trayCount = getTray().length;
+
+  document.querySelectorAll('#ing-buttons button[data-ing]').forEach((btn) => {
+    const id = btn.dataset.ing;
+    const item = GAME_DATA.menu[id];
+    if (!item) return;
+
+    const stock =
+      id === 'suon'
+        ? trayCount // sườn: số trong khay chín (lắp đĩa dùng khay)
+        : Number(state.inventory?.[id]) || 0;
+
+    // Giữ icon + tên ngắn + (số)
+    const icon = ASSETS[id] || '';
+    const shortName =
+      GAME_DATA.orderShortNames?.[id] ||
+      item.name.replace(/^Cơm tấm$/, 'Cơm') ||
+      id;
+    // Hiển thị: với sườn hiện cả kho sống / khay (để khỏi nhầm)
+    let label;
+    if (id === 'suon') {
+      const live = Number(state.inventory?.suon) || 0;
+      label = `${icon} ${shortName} (${live}/${trayCount})`;
+    } else {
+      label = `${icon} ${shortName} (${stock})`;
+    }
+    btn.textContent = label;
+
+    const needed = Boolean(need[id]);
+    btn.classList.toggle('ing-needed', needed);
+  });
 }
 
 function addIngredientToPlate(itemId) {
+  if (!plateContainer) {
+    showServiceToast('Chọn 🍽 Dĩa hoặc 📦 Hộp trước!');
+    return;
+  }
   const state = getState();
   if (itemId === 'suon') {
     const rib = popTrayRib();
@@ -184,12 +330,14 @@ function addIngredientToPlate(itemId) {
   saveState(state);
   currentPlate.push({ id: itemId });
   renderPlate();
+  updateIngredientButtons();
 }
 
 function trashPlate() {
   if (currentPlate.length === 0) return;
   currentPlate = [];
   renderPlate();
+  updateIngredientButtons();
   showServiceToast('Đã đổ đĩa làm lại! (Mất nguyên liệu)');
 }
 
@@ -201,8 +349,14 @@ function deliverPlate() {
   const customer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
   if (!customer) return;
 
-  const result = scoreOrder(customer, currentPlate);
-    const state = getState();
+  const serveErrors = serveTypeErrorCount(
+    customer.serveType,
+    plateContainer,
+    plateBagged
+  );
+
+  const result = scoreOrder(customer, currentPlate, { serveErrors });
+  const state = getState();
 
   // Khách quen: +5% boa trên giá đơn (mục 25)
   let tipExtra = 0;
@@ -245,12 +399,45 @@ function deliverPlate() {
   selectedCustomerId = customers[0]?.id || null;
   currentPlate = [];
 
+  resetPlateServeState();
   renderPlate();
+  updateIngredientButtons();
   renderCustomers();
+  updateServeTypeBar();
   updateHUD();
 
   showServiceToast(
     `+${formatMoney(totalEarned)} (${result.stars}⭐)${customer.isRegular ? ' 💚' : ''} - ${customer.type?.label || 'Khách'}!`
+  );
+}
+
+/** M22 — Báo hết món: khách bỏ đi, không trừ sao / không review */
+function reportOutOfStock() {
+  if (customers.length === 0) {
+    showServiceToast('Chưa có khách nào!');
+    return;
+  }
+  const customer =
+    customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  if (!customer) return;
+
+  if (dayStats) {
+    dayStats.outOfStockCount = (dayStats.outOfStockCount || 0) + 1;
+  }
+
+  customers = customers.filter((c) => c.id !== customer.id);
+  selectedCustomerId = customers[0]?.id || null;
+  currentPlate = [];
+  resetPlateServeState();
+
+  renderPlate();
+  updateIngredientButtons();
+  renderCustomers();
+  updateServeTypeBar();
+  updateHUD();
+
+  showServiceToast(
+    `Đã báo hết — ${customer.type?.label || 'Khách'} bỏ đi (không trừ sao)`
   );
 }
 
@@ -266,7 +453,7 @@ function updateCustomers(dt) {
     priceFactor
   );
 
-  if (spawnedCount < totalCustomers) {
+  if (!isClosing && spawnedCount < totalCustomers) {
     spawnTimer -= dt;
     if (spawnTimer <= 0) {
       if (customers.length < 4) {
@@ -298,25 +485,24 @@ function updateCustomers(dt) {
     return true;
   });
 
-  if (queueChanged || customers.length > 0) {
-    if (!customers.find((c) => c.id === selectedCustomerId)) {
-      selectedCustomerId = customers[0]?.id || null;
-    }
-    renderCustomers();
+  let shouldRenderCustomers = queueChanged;
+
+  if (!customers.find((c) => c.id === selectedCustomerId)) {
+    selectedCustomerId = customers[0]?.id || null;
+    shouldRenderCustomers = true;
   }
 
   // M17 — Cập nhật ẩn/hiện bong bóng thoại theo thời gian
   const now = performance.now();
-  let speechChanged = false;
 
   customers.forEach((c) => {
     if (c.speechUntil && now >= c.speechUntil) {
       c.speechUntil = 0;
-      speechChanged = true;
+      shouldRenderCustomers = true;
     }
   });
 
-  if (speechChanged && !(queueChanged || customers.length > 0)) {
+  if (shouldRenderCustomers) {
     renderCustomers();
   }
 }
@@ -352,6 +538,13 @@ function gameLoop(now) {
 
   remainingTime -= dt;
 
+  // M23 — vừa hết giờ thì chuyển sang trạng thái đóng cửa ngay,
+  // trước khi updateCustomers() có cơ hội spawn khách mới.
+  if (remainingTime <= 0 && !isClosing) {
+    isClosing = true;
+    showServiceToast('Hết giờ — bán hết khách đang đợi rồi đóng cửa');
+  }
+
   // Cập nhật đồng hồ giờ ảo (chỉ hiển thị, mỗi ~0.5s thật)
   virtualMinutes += minsPerSecond * dt;
   lastClockUpdate += dt;
@@ -364,10 +557,12 @@ function gameLoop(now) {
   updateCustomers(dt);
   updateAssistant(dt);
 
-  if (remainingTime <= 0) {
+  // M23 — hết khách trong hàng đợi thì tổng kết
+  if (remainingTime <= 0 && customers.length === 0) {
     finishDay();
     return;
   }
+
   animationFrameId = requestAnimationFrame(gameLoop);
 }
 
@@ -378,6 +573,19 @@ export function finishDay() {
   setLastSummary(dayStats);
   showServiceToast('Hết giờ bán hàng! Chuyển sang Tổng kết.');
   setTimeout(() => window.__game?.showScreen('summary'), 600);
+}
+
+/** M23 — Đóng cửa sớm: dừng khách mới, bán hết hàng đợi */
+export function beginEarlyClose() {
+  if (isClosing) return;
+
+  isClosing = true;
+  showServiceToast('Đang đóng cửa — phục vụ hết khách đang đợi');
+
+  // Nếu hàng đợi trống ngay → kết thúc luôn
+  if (customers.length === 0) {
+    finishDay();
+  }
 }
 
 export function startServiceLoop() {
@@ -418,7 +626,7 @@ export function startService() {
   // Bảng hiệu đèn led: khách nhiều hơn ~15%
   let baseCount = GAME_DATA.customers.dayCount(state.day || 1);
   if (state.upgrades?.ledSign) {
-    baseCount = Math.min(30, Math.round(baseCount * 1.15));
+    baseCount = Math.min(60, Math.round(baseCount * 1.15));
   }
   totalCustomers = baseCount;
 
@@ -428,11 +636,13 @@ export function startService() {
   selectedCustomerId = null;
   currentPlate = [];
   assistantTimer = 0;
+  isClosing = false; // M23 — bắt đầu ngày mới thì cho phép spawn khách
 
   dayStats = {
     day: state.day || 1,
     servedCount: 0,
     leaveCount: 0,
+    outOfStockCount: 0, // M22
     revenue: 0,
     tips: 0,
     startStar: state.star || 4.0,
@@ -445,8 +655,13 @@ export function startService() {
 
   updateHUD();
   initGrill(getGrillSlotCount());
+
+  resetPlateServeState();
   renderPlate();
   renderCustomers();
+  updateIngredientButtons();
+  updateServeTypeBar();
+
   startServiceLoop();
 }
 
@@ -454,11 +669,21 @@ export function initServiceScreen() {
   document.getElementById('customer-row')?.addEventListener('click', (e) => {
     const card = e.target.closest('.customer-card');
     if (!card) return;
+
     selectedCustomerId = card.dataset.id;
+
     // Ẩn thoại khi chọn
     const picked = customers.find((c) => c.id === selectedCustomerId);
     if (picked) picked.speechUntil = 0;
+
+    // M17/M18 — đổi khách thì làm lại đĩa và chọn lại Dĩa/Hộp
+    resetPlateServeState();
+    currentPlate = [];
+
+    renderPlate();
     renderCustomers();
+    updateIngredientButtons();
+    updateServeTypeBar();
   });
 
   document.getElementById('grill-grid')?.addEventListener('click', (e) => {
@@ -466,13 +691,26 @@ export function initServiceScreen() {
     if (!slotEl) return;
     const index = Number(slotEl.dataset.index);
     if (!Number.isNaN(index)) {
-      handleGrillClick(index, { onToast: showServiceToast, onHUDUpdate: updateHUD });
+      handleGrillClick(index, {
+        onToast: showServiceToast,
+        onHUDUpdate: () => {
+          updateHUD();
+          updateIngredientButtons();
+        },
+      });
     }
   });
 
   document.getElementById('ing-buttons')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-ing]');
     if (btn) addIngredientToPlate(btn.dataset.ing);
+  });
+
+  document.getElementById('serve-type-bar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-serve-action]');
+    if (!btn || btn.disabled) return;
+
+    handleServeAction(btn.dataset.serveAction);
   });
 
   document.getElementById('btn-trash-plate')?.addEventListener('click', trashPlate);
@@ -484,6 +722,8 @@ export function initServiceScreen() {
       startServiceLoop();
     }
   });
+
+  document.getElementById('btn-out-of-stock')?.addEventListener('click', reportOutOfStock);
 }
 
 export function getServiceState() {

@@ -75,3 +75,110 @@
   - [x] Nút "Mở bán" ở tab Quán → Chuẩn bị (không bỏ qua bước mua nguyên liệu).
 - **File thay đổi**: `js/tutorial.js` (mới), `js/nav.js` (mới), `js/home.js` (mới), `index.html`, `js/main.js`, `js/state.js`, `js/summary.js`, `style.css`, `PROGRESS.md`.
 - **Bước tiếp theo**: Mốc 7 (tab Doanh thu), Mốc 8 (tab Cài đặt).
+
+## Menu tạm dừng (bổ sung sau sửa gấp)
+- **Đã làm**:
+  - Nút ☰ góc trên trái HUD Bán hàng; mở menu thì dừng thật vòng lặp (đồng hồ ảo, spawn, nướng, kiên nhẫn).
+  - 4 mục: Tiếp tục bán, Âm thanh, Đóng cửa sớm (→ Tổng kết + lưu sổ), Thoát về Chuẩn bị (rollback backup, không lưu ngày).
+- **File**: `js/pausemenu.js`, `js/service.js`, `js/main.js`, `index.html`, `style.css`.
+
+## Mốc 7 — Tab Cài đặt + đồng hồ giờ ảo
+- **Đã làm**:
+  - Âm thanh bật/tắt; giờ mở/đóng 5:00–23:00 (mở < đóng); thời lượng 3/4/5/6 phút — áp dụng từ ngày bán tiếp theo.
+  - Chơi lại từ đầu (xác nhận, xoá save).
+  - HUD Bán hàng: đồng hồ giờ ảo + thanh tiến trình mỏng (chỉ hiển thị, không ảnh hưởng spawn/nướng).
+- **File**: `js/settings.js`, `js/service.js`, `js/state.js`, `js/data.js`, `js/main.js`, `index.html`, `style.css`.
+
+## Mốc 8 — ID sao lưu
+- **Đã làm**:
+  - Xuất chuỗi base64 toàn bộ save + Sao chép; nhập mã + Khôi phục (xác nhận, validate, không hỏng save nếu mã sai).
+- **File**: `js/settings.js`, `index.html`, `style.css`.
+
+## Mốc 9 — Sổ doanh thu
+- **Đã làm**:
+  - Sau Tổng kết (1 lần/ngày): ghi bản ghi vào `revenueHistory` (max 30).
+  - Tab danh sách mới nhất trên đầu; chạm xem chi tiết kiểu card Tổng kết.
+- **File**: `js/revenue.js`, `js/state.js`, `js/summary.js`, `js/main.js`, `index.html`, `style.css`.
+
+## Mốc 10 — Hướng dẫn 4 thẻ
+- **Đã làm**:
+  - Overlay 4 thẻ (Nướng / Nhận đơn / Lắp đĩa / Giao); Tiếp + Bỏ qua.
+  - Lần đầu: Start → Hướng dẫn → Đặt tên quán → Quán. Người cũ: link "Hướng dẫn" trên Start, xong về Start.
+  - Cờ `guideSeen` (+ fallback `tutorialDone` cho save cũ).
+- **File**: `js/tutorial.js`, `js/state.js`, `js/main.js`, `index.html`, `style.css`.
+
+## Mốc 13 — Tab Đánh giá
+- **Đã làm**:
+  - Tab cha bottom nav đổi nhãn **Sổ sách**; 2 tab con **Doanh thu | Đánh giá**.
+  - `starCounts` tích lũy (tách Sao quán 20 gần nhất); `reviews` max 30.
+  - Lý do review theo ưu tiên; tên giả + câu mẫu; `{shop}` / tên quán động; missing/extra khớp món.
+  - Lọc Tất cả / 5★ / ≤2★; sắp xếp mới/cũ; lọc theo ngày; hiện `Ngày X · HH:mm`.
+  - Số sao lớn trên tab Đánh giá = `state.star` (đồng bộ Quán / HUD).
+- **File**: `js/reviews.js` (mới), `js/data.js`, `js/state.js`, `js/scoring.js`, `js/service.js`, `js/revenue.js`, `index.html`, `style.css`.
+
+## Mốc 14 — Cảnh báo hao + Đổ bỏ
+- **Đã làm**:
+  - Dòng 🟠/🟢 hao qua đêm trên từng nguyên liệu (sườn/chả 50% nếu chưa tủ lạnh; tồn 0 thì ẩn).
+  - Nút Đổ bỏ + dialog số lượng; trừ kho, không hoàn tiền (`discardIngredient`).
+- **File**: `js/prep.js`, `js/state.js`, `style.css`.
+
+## Mốc 15 — Mua 1 / 5 / 10 / Tùy chỉnh
+- **Đã làm**:
+  - Panel mua: chip 1/5/10 + Tùy chỉnh; hiện SL, thành tiền, kho sau mua; vô hiệu nếu không đủ tiền.
+- **File**: `js/prep.js`, `style.css` (dùng sẵn `buyIngredient(id, qty)`).
+
+## Mốc 16 — Tự chỉnh giá bán
+- **Đã làm**:
+  - `menuPrices` (đang bán) + `pendingMenuPrices` (chỉnh ở Chuẩn bị); áp dụng khi "Qua ngày mới" (`applyPendingPrices`).
+  - Bước 1.000đ, khung 50%–200% giá gốc; nhãn 🟢/🟡/🔴.
+  - `heSoGia` theo giá Cơm tấm → `gapSeconds(..., priceFactor)`.
+  - Đơn có món > 1.3× gốc → trừ 1 sao (tối thiểu 1); review `expensive`.
+  - Tiền nhận theo giá active (`getActivePrice`).
+- **File**: `js/pricing.js` (mới), `js/data.js`, `js/state.js`, `js/scoring.js`, `js/service.js`, `js/summary.js`, `js/prep.js`, `js/main.js`, `style.css`.
+
+## Mốc 17 — Order chữ + thoại + khách quen
+- **Đã làm**:
+  - Order bubble: 1 icon đại diện + chữ ngắn (`formatOrderShort` / `orderShortNames`).
+  - Câu thoại khi spawn (~4s), ẩn khi chọn khách hoặc hết giờ.
+  - `typeServeGood`: phục vụ ≥4★ theo loại; từ lần 5, 20% **Khách quen** (+10% kiên nhẫn, +5% boa khi ≥4★).
+- **File**: `js/data.js`, `js/state.js`, `js/service.js`, `js/reviews.js`, `style.css`.
+
+## Mốc 18 — heSoSao + dayCount tới 60
+- Công thức `dayCount` / `starFactor` / `gapSeconds` (chia heSoSao, heSoGia).
+- **File:** `js/data.js`, `js/service.js`.
+
+## Mốc 19 — Tồn kho + viền xanh
+- Nút món hiện số kho; viền xanh món còn thiếu theo khách đang chọn.
+- **File:** `js/service.js`, `style.css`.
+
+## Mốc 20 — Ăn tại quán / Mang đi
+- `js/servetype.js`: dĩa/hộp/bọc; lỗi serveType như thiếu 1 món.
+- **File:** `js/servetype.js` (mới), `js/service.js`, `js/scoring.js`, `index.html`, `style.css`.
+
+## Mốc 21 — Nước mắm cay / thường
+- Menu + kho + ~55% order kèm mắm; scoring qua missing/extra.
+- **File:** `js/data.js`, `js/state.js`, `js/service.js`, `index.html`, `style.css`.
+
+## Mốc 22 — Báo hết món
+- Nút Báo hết: khách đi, không sao/review; `dayStats.outOfStockCount`.
+- **File:** `js/service.js`, `index.html`, `style.css`.
+
+## Mốc 23 — Hết giờ / đóng sớm: bán hết hàng đợi
+- `isClosing`: dừng spawn; phục vụ hết queue rồi mới `finishDay`.
+- Pause «Đóng cửa sớm» → `beginEarlyClose` (không finish ngay).
+- **File:** `js/service.js`, `js/pausemenu.js`, `js/main.js`.
+
+## Mốc 24 — Tab Giá bán riêng (bảng menu)
+- **Đã làm**:
+  - Tách phần chỉnh giá ra khỏi tab Nguyên liệu, thêm tab con **Nguyên liệu | Nâng cấp | Giá bán** ở `index.html` và `js/prep.js`.
+  - Tab Giá bán render dạng bảng menu tối, mỗi món có giá đang áp dụng, ô nhập số trực tiếp 0–1.000.000đ, nhãn `FREE` khi giá = 0, và giữ `pendingMenuPrices` / `applyPendingPrices` như logic M16.
+  - Xoá các nút `+/-` cũ trên card nguyên liệu; số không hợp lệ bị bỏ qua, số ngoài khung được kẹp về biên, save cũ vẫn an toàn nhờ fallback default và `ensurePriceMaps`.
+  - CSS tối cho bảng giá bán và input mobile-friendly trong `style.css`.
+- **File thay đổi**: `index.html`, `js/prep.js`, `style.css`, `PROGRESS.md`.
+- **Còn dở**: M25 — Tab con "Nước" và mở khóa đồ uống.
+- **Bước tiếp theo**: M25 (`js/drinks.js`, `js/prep.js`, `js/data.js`).
+
+## Trạng thái hiện tại
+- **Đã xong:** M1–M10, M13–M24.
+- **PAUSED:** M11, M12.
+- **Bước tiếp:** M25 — Tab con "Nước" và mở khóa đồ uống.

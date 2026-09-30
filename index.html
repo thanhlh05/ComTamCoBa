@@ -102,6 +102,9 @@
             <button id="prep-tab-upgrades" class="tab-btn" role="tab" aria-selected="false" data-tab="upgrades" type="button">
               ⭐ Nâng cấp
             </button>
+            <button id="prep-tab-pricing" class="tab-btn" role="tab" aria-selected="false" data-tab="pricing" type="button">
+              💰 Giá bán
+            </button>
           </div>
         </div>
 
@@ -176,19 +179,26 @@
               <span class="plate-empty">Đĩa trống</span>
             </div>
           </div>
+          <div id="serve-type-bar" class="serve-type-bar">
+            <button type="button" class="serve-type-btn" data-serve-action="plate" id="btn-container-plate">🍽 Dĩa</button>
+            <button type="button" class="serve-type-btn" data-serve-action="box" id="btn-container-box">📦 Hộp</button>
+            <button type="button" class="serve-type-btn" data-serve-action="bag" id="btn-bag" disabled>🛍 Bọc</button>
+          </div>
           <div class="ing-buttons" id="ing-buttons">
             <button class="ing-btn" data-ing="com" type="button">🍚 Cơm</button>
             <button class="ing-btn" data-ing="suon" type="button">🍖 Sườn (<span id="tray-btn-count">0</span>)</button>
             <button class="ing-btn" data-ing="bi" type="button">🥓 Bì</button>
             <button class="ing-btn" data-ing="trung" type="button">🍳 Trứng</button>
             <button class="ing-btn" data-ing="tra" type="button">🧊 Trà</button>
+            <button class="ing-btn" data-ing="mam_cay" type="button">🌶️ Mắm cay</button>
+            <button class="ing-btn" data-ing="mam_thuong" type="button">🐟 Mắm thường</button>
             <button id="btn-ing-cha" class="ing-btn hidden" data-ing="cha" type="button">🥮 Chả</button>
-            <button id="btn-ing-canh" class="ing-btn hidden" data-ing="canh" type="button">🍲 Canh</button>
-          </div>
+            <button id="btn-ing-canh" class="ing-btn hidden" data-ing="canh" type="button">🍲 Canh</button>          </div>
         </div>
 
         <div class="service-actions">
           <button id="btn-trash-plate" class="danger-btn" type="button">🗑 Đổ đĩa</button>
+          <button id="btn-out-of-stock" class="secondary-btn" type="button">📭 Báo hết</button>
           <button id="btn-deliver-plate" class="deliver-btn" type="button">🚀 Giao đĩa</button>
         </div>
 

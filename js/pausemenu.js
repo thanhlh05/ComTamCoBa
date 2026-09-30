@@ -5,15 +5,17 @@ let isMenuOpen = false;
 let stopServiceLoopFn = null;
 let startServiceLoopFn = null;
 let finishDayFn = null;
+let beginEarlyCloseFn = null; // M23
 
 /**
  * Đăng ký các hàm service cần gọi.
  * Gọi từ main.js để tránh circular dependency.
  */
-export function registerServiceFunctions(stop, start, finish) {
+export function registerServiceFunctions(stop, start, finish, beginEarlyClose) {
   stopServiceLoopFn = stop;
   startServiceLoopFn = start;
   finishDayFn = finish;
+  beginEarlyCloseFn = beginEarlyClose; // M23
 }
 
 function showServiceToast(message) {
@@ -86,10 +88,14 @@ function showConfirmDialog(message, onConfirm) {
 }
 
 function confirmEarlyClose() {
-  showConfirmDialog('Đóng cửa sớm? Khách đang chờ sẽ bỏ đi.', () => {
+  showConfirmDialog('Đóng cửa sớm? Hệ thống sẽ ngừng nhận khách mới và phục vụ hết khách đang chờ.', () => {
+    // Đóng overlay pause và đảm bảo service loop chạy lại
     closePauseMenu();
-    // Khách chưa giao tính như bỏ đi, trực tiếp finishDay
-    if (finishDayFn) finishDayFn();
+
+    // M23 — ngừng spawn khách mới, nhưng tiếp tục phục vụ queue
+    if (beginEarlyCloseFn) {
+      beginEarlyCloseFn();
+    }
   });
 }
 

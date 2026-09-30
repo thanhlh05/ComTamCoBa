@@ -12,10 +12,38 @@ export const GAME_DATA = {
     trung: { id: 'trung', name: 'Trứng ốp la', price: 7000, cost: 2500, required: false, group: 'extra' },
     canh: { id: 'canh', name: 'Canh khổ qua', price: 5000, cost: 1500, required: false, group: 'extra', unlockCost: 150000 },
     tra: { id: 'tra', name: 'Trà đá', price: 5000, cost: 1000, required: false, group: 'drink' },
+      mam_cay: { id: 'mam_cay', name: 'Nước mắm cay', price: 0, cost: 500, required: false, group: 'sauce' },
+      mam_thuong: { id: 'mam_thuong', name: 'Nước mắm thường', price: 0, cost: 500, required: false, group: 'sauce' },
   },
   customers: {
+    // Tỉ lệ khách gọi nước mắm (~55%)
+    fishSauceChance: 0.55,
     dayCount(day) {
-      return Math.min(30, 10 + 2 * (day - 1));
+      const d = Math.max(1, Number(day) || 1);
+      if (d <= 10) return 10 + 2 * (d - 1);
+      return Math.min(60, 28 + (d - 10));
+    },
+    /**
+     * heSoSao theo Sao quán (mục 26)
+     */
+    starFactor(star) {
+      const s = Number(star) || 4.0;
+      if (s >= 4.5) return 1.25;
+      if (s >= 4.0) return 1.0;
+      if (s >= 3.0) return 0.9;
+      if (s >= 2.0) return 0.8;
+      return 0.7;
+    },
+    /**
+     * Khoảng cách khách (giây) — mục 4:
+     * (thời lượng / số khách) / (1 + bonus) / heSoSao / heSoGia
+     */
+    gapSeconds(day, star, bonusSignage = 0, dayLengthSeconds = 180, priceFactor = 1) {
+      const count = Math.max(1, this.dayCount(day));
+      const heSoSao = this.starFactor(star);
+      const heSoGia = Math.max(0.6, Math.min(1.3, Number(priceFactor) || 1));
+      const bonus = 1 + (Number(bonusSignage) || 0);
+      return dayLengthSeconds / count / bonus / heSoSao / heSoGia;
     },
     types: [
       { id: 'hoc_sinh', label: 'Học sinh', icon: '👧', patience: 45, extraMin: 0, extraMax: 1, tip: 0, unlockDay: 1 },
@@ -24,51 +52,47 @@ export const GAME_DATA = {
       { id: 'du_lich', label: 'Khách du lịch', icon: '📷', patience: 35, extraMin: 2, extraMax: 4, tip: 0.25, unlockDay: 4 },
       { id: 'shipper', label: 'Shipper', icon: '📦', patience: 20, extraMin: 1, extraMax: 2, tip: 0.3, unlockDay: 6 },
     ],
-    gapSeconds(day, star, bonusSignage = 0, dayLengthSeconds = 180, priceFactor = 1) {
-      const count = this.dayCount(day);
-      const factor = Math.max(0.6, Math.min(1.3, Number(priceFactor) || 1));
-      // heSoGia > 1 → khách đông hơn → khoảng cách nhỏ hơn
-      return ((dayLengthSeconds / count) * (1.4 - 0.1 * star) / (1 + bonusSignage)) / factor;
-    },
-    // M17 — tên ngắn trên bubble order
-    orderShortNames: {
-      com: 'Cơm',
-      suon: 'sườn',
-      bi: 'bì',
-      cha: 'chả',
-      trung: 'trứng',
-      canh: 'canh',
-      tra: 'trà',
-    },
+  },
+  // M17 — tên ngắn order (đặt ở GỐC GAME_DATA, không nằm trong customers)
+  orderShortNames: {
+    com: 'Cơm',
+    suon: 'sườn',
+    bi: 'bì',
+    cha: 'chả',
+    trung: 'trứng',
+    canh: 'canh',
+    tra: 'trà',
+    mam_cay: 'mắm cay',
+    mam_thuong: 'mắm thường',
+  },
 
-    // M17 — câu thoại khi khách vừa tới (mục 25)
-    customerLines: {
-      hoc_sinh: [
-        'Quán ơi cho con cơm sườn bì, thêm miếng trứng nha!',
-        'Cho con cơm sườn với trà đá nha!',
-        'Con đói quá, làm nhanh giúp con với!',
-      ],
-      van_phong: [
-        'Cho em cơm sườn chả, thêm trà đá.',
-        'Cho em một phần bình thường, mang đi giúp em.',
-        'Cho em cơm sườn bì, không ớt nha.',
-      ],
-      bac_tai: [
-        'Cho tôi phần sườn nhiều cơm nha, làm lẹ giúp tôi!',
-        'Cho tôi cơm sườn với trứng, ăn nhanh xong chạy tiếp.',
-        'Thêm trà đá cho tỉnh táo nha!',
-      ],
-      du_lich: [
-        'Cho em một phần cơm sườn với trà đá ạ!',
-        'Cho em thử một phần cơm tấm đặc biệt ạ!',
-        'Nghe nói ở đây ngon, cho em thử phần đầy đủ!',
-      ],
-      shipper: [
-        'Đơn giao gấp giùm em, cơm sườn 2 phần!',
-        'Làm nhanh giúp anh, khách đang chờ!',
-        'Cơm sườn bì, đóng hộp mang đi nha!',
-      ],
-    },
+  // M17 — câu thoại (gốc GAME_DATA)
+  customerLines: {
+    hoc_sinh: [
+      'Quán ơi cho con cơm sườn bì, thêm miếng trứng nha!',
+      'Cho con cơm sườn với trà đá nha!',
+      'Con đói quá, làm nhanh giúp con với!',
+    ],
+    van_phong: [
+      'Cho em cơm sườn chả, thêm trà đá.',
+      'Cho em một phần bình thường, mang đi giúp em.',
+      'Cho em cơm sườn bì, không ớt nha.',
+    ],
+    bac_tai: [
+      'Cho tôi phần sườn nhiều cơm nha, làm lẹ giúp tôi!',
+      'Cho tôi cơm sườn với trứng, ăn nhanh xong chạy tiếp.',
+      'Thêm trà đá cho tỉnh táo nha!',
+    ],
+    du_lich: [
+      'Cho em một phần cơm sườn với trà đá ạ!',
+      'Cho em thử một phần cơm tấm đặc biệt ạ!',
+      'Nghe nói ở đây ngon, cho em thử phần đầy đủ!',
+    ],
+    shipper: [
+      'Đơn giao gấp giùm em, cơm sườn 2 phần!',
+      'Làm nhanh giúp anh, khách đang chờ!',
+      'Cơm sườn bì, đóng hộp mang đi nha!',
+    ],
   },
   star: {
     start: 4.0,
@@ -125,6 +149,8 @@ export const GAME_DATA = {
       trung: '🍳',
       canh: '🍲',
       tra: '🧊',
+        mam_cay: '🌶️',
+        mam_thuong: '🐟',
       student: '👧',
       office: '💼',
       driver: '🛵',

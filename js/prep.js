@@ -1,4 +1,4 @@
-import { getState, buyIngredient, buyUpgrade, discardIngredient } from './state.js';
+import { getState, buyIngredient, buyUpgrade, discardIngredient, saveState } from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import {
@@ -16,6 +16,19 @@ let discardItemId = null;
 let discardMax = 0;
 let buyTargetId = null;
 let buyQty = 10;
+
+const PRICE_INPUT_MIN = 0;
+const PRICE_INPUT_MAX = 1000000;
+
+function sanitizeMenuPrice(rawValue) {
+  if (rawValue === '' || rawValue === null || rawValue === undefined) return null;
+  const str = String(rawValue).trim();
+  if (str === '') return null;
+  const numeric = Number(str);
+  if (!Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric);
+  return Math.max(PRICE_INPUT_MIN, Math.min(PRICE_INPUT_MAX, rounded));
+}
 
 /**
  * Hiển thị toàn bộ màn hình chuẩn bị (HUD + nội dung tab đang chọn).
@@ -36,13 +49,19 @@ export function renderPrepScreen() {
   // 2. Cập nhật trạng thái Tab bar
   const tabIngredientsBtn = document.getElementById('prep-tab-ingredients');
   const tabUpgradesBtn = document.getElementById('prep-tab-upgrades');
+  const tabPricingBtn = document.getElementById('prep-tab-pricing');
 
-  if (tabIngredientsBtn && tabUpgradesBtn) {
+  if (tabIngredientsBtn && tabUpgradesBtn && tabPricingBtn) {
     const isIng = activeTab === 'ingredients';
+    const isUpgrade = activeTab === 'upgrades';
+    const isPricing = activeTab === 'pricing';
+
     tabIngredientsBtn.classList.toggle('active', isIng);
     tabIngredientsBtn.setAttribute('aria-selected', String(isIng));
-    tabUpgradesBtn.classList.toggle('active', !isIng);
-    tabUpgradesBtn.setAttribute('aria-selected', String(!isIng));
+    tabUpgradesBtn.classList.toggle('active', isUpgrade);
+    tabUpgradesBtn.setAttribute('aria-selected', String(isUpgrade));
+    tabPricingBtn.classList.toggle('active', isPricing);
+    tabPricingBtn.setAttribute('aria-selected', String(isPricing));
   }
 
   // 3. Render danh sách theo tab
@@ -51,6 +70,8 @@ export function renderPrepScreen() {
 
   if (activeTab === 'ingredients') {
     contentEl.innerHTML = renderIngredientsList(state);
+  } else if (activeTab === 'pricing') {
+    contentEl.innerHTML = renderPricingList(state);
   } else {
     contentEl.innerHTML = renderUpgradesList(state);
   }
@@ -241,7 +262,6 @@ function renderIngredientsList(state) {
                   Tồn kho: <strong>${stock}</strong> phần
                 </div>
                 ${spoilHtml}
-                ${!isLocked ? renderPriceRow(item.id, state) : ''}
             </div>
           </div>
 
@@ -251,6 +271,53 @@ function renderIngredientsList(state) {
         </div>`;
     })
     .join('');
+}
+
+function renderPricingList(state) {
+  const menuItems = Object.values(GAME_DATA.menu || {}).filter((item) => item && item.id);
+
+  return `
+    <div class="pricing-table">
+      <div class="pricing-row pricing-header">
+        <span class="pricing-name">Món</span>
+        <span class="pricing-active">Hiện tại</span>
+        <span class="pricing-input-label">Giá mới</span>
+      </div>
+      ${menuItems.map((item) => {
+        const active = getActivePrice(item.id, state);
+        const pending = getPendingPrice(item.id, state);
+        const value = Number.isFinite(pending) ? pending : active;
+        const note = pending !== active ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>' : '';
+        const label = Number(value) === 0 ? '<span class="price-label price-free">FREE</span>' : (() => {
+          const info = getPriceLabel(item.id, value);
+          return info ? `<span class="price-label price-${info.kind}">${info.text}</span>` : '';
+        })();
+
+        return `
+          <div class="pricing-row">
+            <span class="pricing-name">${item.name}</span>
+            <span class="pricing-active">${formatMoney(active)}</span>
+            <div class="pricing-input-wrap">
+              <input
+                class="pricing-input"
+                type="number"
+                inputmode="numeric"
+                min="${PRICE_INPUT_MIN}"
+                max="${PRICE_INPUT_MAX}"
+                step="1000"
+                data-action="price-input"
+                data-id="${item.id}"
+                value="${Math.max(PRICE_INPUT_MIN, Math.min(PRICE_INPUT_MAX, Number(value) || 0))}"
+                aria-label="Giá mới cho ${item.name}"
+              />
+            </div>
+            <div class="pricing-meta">${label}</div>
+            ${note}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
 }
 
 /**
@@ -375,6 +442,25 @@ function handleContentClick(event) {
     adjustPendingPrice(id, -1);
     renderPrepScreen();
   }
+}
+
+function handlePricingInput(event) {
+  const input = event.target.closest('input[data-action="price-input"]');
+  if (!input) return;
+
+  const itemId = input.dataset.id;
+  if (!itemId) return;
+
+  const nextValue = sanitizeMenuPrice(input.value);
+  if (nextValue === null) return;
+
+  const state = getState();
+  if (!state.pendingMenuPrices) state.pendingMenuPrices = {};
+  state.pendingMenuPrices[itemId] = nextValue;
+  saveState(state);
+
+  input.value = String(Math.max(PRICE_INPUT_MIN, Math.min(PRICE_INPUT_MAX, nextValue)));
+  renderPrepScreen();
 }
 
 function ensureDiscardDialog() {
@@ -677,6 +763,7 @@ export function initPrepScreen(options = {}) {
   // Chuyển tab
   const tabIngredientsBtn = document.getElementById('prep-tab-ingredients');
   const tabUpgradesBtn = document.getElementById('prep-tab-upgrades');
+  const tabPricingBtn = document.getElementById('prep-tab-pricing');
 
   tabIngredientsBtn?.addEventListener('click', () => {
   activeTab = 'ingredients';
@@ -690,9 +777,14 @@ export function initPrepScreen(options = {}) {
   renderPrepScreen();
   });
 
+  tabPricingBtn?.addEventListener('click', () => {
+    handleTabClick('pricing');
+  });
+
   // Uỷ quyền sự kiện mua hàng trong danh sách
   const contentEl = document.getElementById('prep-content');
   contentEl?.addEventListener('click', handleContentClick);
+  contentEl?.addEventListener('input', handlePricingInput);
 
   // Nút Mở bán
   const openServiceBtn = document.getElementById('btn-open-service');

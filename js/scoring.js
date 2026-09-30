@@ -5,7 +5,8 @@ import { getState } from './state.js';
 /**
  * Chấm điểm đơn theo mục 7 + phạt giá mục 24.
  */
-export function scoreOrder(customer, plate) {
+export function scoreOrder(customer, plate, options = {}) {
+  const serveErrors = Number(options.serveErrors) || 0;
   const state = getState();
   const reqCounts = {};
   const delivCounts = {};
@@ -24,7 +25,7 @@ export function scoreOrder(customer, plate) {
     if (diff < 0) for (let i = 0; i < -diff; i++) missing.push(k);
     else if (diff > 0) for (let i = 0; i < diff; i++) extra.push(k);
   });
-  const errors = missing.length + extra.length;
+  const errors = missing.length + extra.length + serveErrors;
 
   const pct = (customer.patience / customer.maxPatience) * 100;
   const ribDelivered = plate.find((i) => i.id === 'suon');

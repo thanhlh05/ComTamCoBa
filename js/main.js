@@ -17,6 +17,7 @@ import {
   getServiceState,
   finishDay,
   startServiceLoop,
+  beginEarlyClose,
 } from './service.js';
 import { handleGrillClick, getGrillSlots, getTray } from './grill.js';
 import { initSummaryScreen, showSummaryScreen } from './summary.js';
@@ -108,7 +109,14 @@ function initializeGame() {
   });
 
   initServiceScreen();
-  registerServiceFunctions(stopServiceLoop, startServiceLoop, finishDay);
+
+  registerServiceFunctions(
+    stopServiceLoop,
+    startServiceLoop,
+    finishDay,
+    beginEarlyClose
+  );
+
   initPauseMenu();
   initSummaryScreen();
   initRevenueScreen();
@@ -149,4 +157,5 @@ window.__game = {
   finishDay,
   startServiceLoop,
   stopServiceLoop,
+  beginEarlyClose,
 };

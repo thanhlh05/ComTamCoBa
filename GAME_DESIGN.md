@@ -18,6 +18,7 @@ Game mô phỏng bán cơm tấm vỉa hè Sài Gòn. Chạy trên trình duyệ
 - Đơn vị: đồng (hiển thị dạng `15.000đ`).
 - Tiền khởi đầu: **200.000đ**.
 - Tiền thuê mặt bằng mỗi ngày (trừ lúc tổng kết): `30.000 + 5.000 × (ngày - 1)`, tối đa 80.000.
+- **Lương nhân viên** mỗi ngày (trừ lúc tổng kết, cộng riêng với tiền thuê mặt bằng): xem mục 38.
 - Nếu tiền < 0 và không còn nguyên liệu: cho vay 1 lần duy nhất 100.000đ ("Cô Ba cho mượn"). Lần 2 thì Game Over (có nút chơi lại).
 
 ## 3. Thực đơn và nguyên liệu
@@ -26,23 +27,29 @@ Mỗi đơn khách = 1 đĩa cơm tấm + các món thêm. Cơm và đồ chua l
 
 | Mã | Món | Giá bán | Giá vốn/phần | Ghi chú |
 |---|---|---|---|---|
-| com | Cơm tấm (đĩa) | 15.000 | 3.000 | Bắt buộc, có kèm đồ chua và nước mắm |
+| com | Cơm tấm (đĩa) | 15.000 | 3.000 | Bắt buộc, có kèm đồ chua |
 | suon | Sườn nướng | +20.000 | 9.000 | Phải nướng trên vỉ |
 | bi | Bì | +8.000 | 2.500 | Lấy ngay |
 | cha | Chả trứng | +10.000 | 3.500 | Mở khóa bằng nâng cấp |
 | trung | Trứng ốp la | +7.000 | 2.500 | Lấy ngay |
 | canh | Canh khổ qua | +5.000 | 1.500 | Mở khóa cùng chả |
-| tra | Trà đá | +5.000 | 1.000 | Lấy ngay |
+| mamcay | Nước mắm cay | +0 | 500 | Xem mục 29 |
+| mamthuong | Nước mắm thường | +0 | 500 | Xem mục 29 |
 
-Mua nguyên liệu theo **lố 10 phần** (giá = giá vốn × 10). Tồn kho hiển thị số phần.
+**Đồ uống** (trà và các loại nước giải khát khác) chuyển sang tab con "Nước" riêng — xem mục 33, không còn nằm trong bảng này.
+
+Mua nguyên liệu theo **lố 10 phần** (giá = giá vốn × 10, riêng số lượng tùy chỉnh xem mục 23). Tồn kho hiển thị số phần.
 
 **Tồn kho qua đêm**: sườn và chả còn dư mất 50% (làm tròn xuống) nếu chưa mua Tủ lạnh. Các món khác giữ nguyên.
 
 ## 4. Khách hàng
 
-Số khách mỗi ngày: `min(30, 10 + 2 × (ngày - 1))`, đến rải trong suốt thời lượng bán (theo giây thật, không phụ thuộc đồng hồ ảo ở mục 15).
+Số khách mỗi ngày (trước khi áp dụng heSoSao, heSoGia, bảng hiệu): `ngày ≤ 10 ? 10 + 2 × (ngày - 1) : min(60, 28 + (ngày - 10))`, đến rải trong suốt thời lượng bán (theo giây thật, không phụ thuộc đồng hồ ảo ở mục 15). Nghĩa là tăng đều +2/ngày tới ngày 10 (đạt 28), sau đó tăng chậm lại +1/ngày, chặn trần ở 60 (đạt ở ngày 42). Thay cho công thức cũ chặn cứng ở 30 từ ngày 11 — mục đích để người chơi lâu năm vẫn thấy quán "ngày càng đông" thay vì đứng yên mãi ở một mức.
 
-Khoảng cách giữa 2 khách (giây) = `(thời lượng bán giây / số khách) × (1.4 - 0.1 × sao) / (1 + bonus bảng hiệu)`.
+Khoảng cách giữa 2 khách (giây) = `(thời lượng bán giây / số khách) / (1 + bonus bảng hiệu) / heSoSao / heSoGia`.
+
+- `heSoGia`: hệ số giá bán, công thức ở mục 24.
+- `heSoSao`: hệ số theo Sao quán hiện tại, **thay thế hoàn toàn** công thức `(1.4 - 0.1 × sao)` bản cũ — xem mục 26 để biết bảng hệ số cụ thể.
 
 | Loại | Kiên nhẫn (s) | Số món thêm | Tiền boa | Xuất hiện từ ngày |
 |---|---|---|---|---|
@@ -70,10 +77,12 @@ Thanh kiên nhẫn chia màu: xanh > 50%, vàng 20-50%, đỏ < 20%. Hết kiên
 
 ## 6. Cách làm một đơn
 
-1. Chạm vào khách để chọn đơn đang phục vụ (đơn hiện dạng icon phía trên).
-2. Lắp đĩa: chạm nút món trong khay dưới (cơm, bì, trứng, chả, canh, trà). Sườn lấy từ vỉ (miếng đã nhấc).
-3. Nút **Giao** bật khi đĩa đủ món. Giao sai/thiếu món vẫn được giao nhưng khách chấm thấp.
-4. Nút **Đổ đĩa** để làm lại (mất nguyên liệu đã dùng).
+1. Chạm vào khách để chọn đơn đang phục vụ (đơn hiện dạng chữ ngắn, mục 25). Đơn có gắn loại phục vụ 🍽 Tại quán hoặc 🥡 Mang đi (mục 28).
+2. Bước đầu tiên bắt buộc: chạm **🍽 Dĩa** hoặc **📦 Hộp** đúng theo loại phục vụ của khách (mục 28). Nếu khách mang đi, sau đó bắt buộc chạm thêm **🛍 Bọc** trước khi các nút món khác dùng được (mục 28).
+3. Lắp món: chạm nút món trong khay dưới (cơm, bì, trứng, chả, canh, nước mắm cay/thường theo mục 29, nước giải khát theo mục 33). Sườn lấy từ vỉ (miếng đã nhấc). Mỗi nút món hiện kèm số tồn kho (mục 27); món cần cho đơn đang chọn có viền xanh gợi ý (mục 27).
+4. Nếu phát hiện đơn cần món đã hết sạch không cách nào có được, dùng nút **⚠️ Báo hết món** thay vì cố giao (mục 30).
+5. Nút **Giao** bật khi đĩa/hộp đủ món. Giao sai/thiếu món (bao gồm sai dĩa/hộp, thiếu bọc, sai/thiếu nước mắm theo yêu cầu) vẫn được giao nhưng khách chấm thấp theo mục 7 và mục 37.
+6. Nút **Đổ đĩa** để làm lại (mất nguyên liệu đã dùng, không mất lượt chọn dĩa/hộp).
 
 ## 7. Sao đánh giá
 
@@ -100,9 +109,11 @@ Mỗi khách chấm 1-5 sao:
 | Quạt máy | 300.000 | Kiên nhẫn khách +15% | 1 cấp |
 | Tủ lạnh | 350.000 | Sườn/chả không hao qua đêm | 1 cấp |
 | Mở món Chả + Canh | 150.000 | Thêm 2 món vào menu | 1 cấp |
-| Thuê chị Hai phụ bếp | 500.000 | Tự lắp giúp 1 món mỗi 10s (bì/trứng/cơm) | 1 cấp |
+| Nhân viên Nướng | 350.000 | Tự nhấc sườn chín khỏi vỉ (mục 38) | 1 cấp |
+| Nhân viên Làm món | 350.000 | Tự lắp giúp 1 món mỗi 10s (mục 38) | 1 cấp |
+| Tủ nước giải khát | 280.000 | Mở khóa Xá xị Cô Ba, Cam ép, Sữa đậu nành (mục 33) | 1 cấp |
 
-## 9. Sự kiện ngẫu nhiên (làm ở mốc dời xuống cuối)
+## 9. Sự kiện ngẫu nhiên (làm ở mốc dời xuống cuối, vẫn PAUSED — chờ M11)
 
 Mỗi ngày từ ngày 3 có 30% xảy ra 1 sự kiện (hiện thông báo lúc bắt đầu ngày):
 
@@ -110,7 +121,8 @@ Mỗi ngày từ ngày 3 có 30% xảy ra 1 sự kiện (hiện thông báo lúc
 - **Tan học**: học sinh x2 trong 30 giây đầu.
 - **Cúp điện**: quạt máy/đèn tắt, kiên nhẫn -15%.
 - **Có người khen trên mạng**: khách +25%, cần đủ sườn.
-- **Tăng giá sườn**: giá vốn sườn +30% ngày đó.
+
+Lưu ý: sự kiện "Tăng giá sườn" trước đây đặt ở đây đã **tách riêng thành mục 34** (biến động giá vốn) vì làm được ngay, không cần chờ toàn bộ hệ sự kiện ở mục này.
 
 ## 10. Màn hình (cập nhật cấu trúc điều hướng)
 
@@ -118,10 +130,10 @@ Mỗi ngày từ ngày 3 có 30% xảy ra 1 sự kiện (hiện thông báo lúc
 2. **Hướng dẫn** (popup 4 thẻ, mục 18). Có thể mở lại từ màn Start (link chữ gạch chân) mà không hiện lại màn Đặt tên quán.
 3. **Đặt tên quán** (chỉ hiện lần đầu, mục 13).
 4. **Quán** (tab 🏠, dashboard): tên quán, sao, ngày, tiền, nút "Mở bán".
-5. **Chuẩn bị** (tab 🍚): giữ nguyên 2 tab con Nguyên liệu / Nâng cấp, nút "Mở bán".
+5. **Chuẩn bị** (tab 🍚): 4 tab con **Nguyên liệu | Nâng cấp | Giá bán | Nước** (mục 32, 33), nút "Mở bán".
 6. **Bán hàng**: HUD gồm tiền, đồng hồ giờ ảo (mục 15), sao, nút ☰ menu tạm dừng (mục 19) ở góc trên bên trái; hàng khách; vỉ nướng; khay; nút món; Giao/Đổ đĩa. **Không hiện bottom nav.** Không có nút thoát trực tiếp trên màn hình — mọi cách thoát/tạm dừng đều đi qua menu ☰.
 7. **Tổng kết**: dữ liệu đúng của ngày vừa bán, khớp với ngày đang hiện ở HUD trước đó (xem lưu ý bug ở dưới). Nút "Qua ngày mới" mới tăng biến ngày, sau đó quay lại tab Quán/Chuẩn bị và hiện lại bottom nav.
-8. **Doanh thu** (tab 📊, mục 17).
+8. **Sổ sách** (tab 📊): Doanh thu + Đánh giá (mục 17, 21).
 9. **Cài đặt** (tab ⚙️, mục 16).
 10. **Game Over**.
 
@@ -150,7 +162,7 @@ Mỗi ngày từ ngày 3 có 30% xảy ra 1 sự kiện (hiện thông báo lúc
 - 4 tab cố định dưới màn hình, hiện ở mọi lúc **trừ** khi đang ở màn Bán hàng, Start, Hướng dẫn, Đặt tên quán:
   - 🏠 **Quán** — dashboard: tên quán, sao, ngày, tiền, nút "Mở bán"/"Tiếp tục bán".
   - 🍚 **Chuẩn bị** — màn hiện tại, giữ nguyên 2 tab con.
-  - 📊 **Doanh thu** — mục 17.
+  - 📊 **Sổ sách** — 2 tab con: Doanh thu (mục 17) | Đánh giá (mục 21). (Nhãn bottom nav: "Sổ sách".)
   - ⚙️ **Cài đặt** — mục 16.
 - Khi đang Bán hàng: ẩn hoàn toàn bottom nav, không có cách nào thoát ngang trừ hết giờ/hết khách, để tránh thoát nhầm giữa lúc đang phục vụ.
 - Sau khi bấm "Qua ngày mới" ở Tổng kết: quay về tab Quán/Chuẩn bị, hiện lại bottom nav.
@@ -203,7 +215,7 @@ Thay đồng hồ đếm giây (`119s`) bằng đồng hồ giờ trong ngày, t
 - Chạm vào: **tạm dừng toàn bộ vòng lặp game** (đồng hồ giờ ảo, spawn khách, độ chín sườn, thanh kiên nhẫn — tất cả đứng lại), hiện overlay menu gồm:
   1. **Tiếp tục bán** — đóng menu, chạy tiếp đúng chỗ vừa dừng.
   2. **🔊/🔇 Âm thanh** — bật/tắt nhanh, đồng bộ hai chiều với công tắc âm thanh ở tab Cài đặt.
-  3. **Đóng cửa sớm** — kết thúc ngày bán ngay lập tức bằng dữ liệu hiện có (khách còn đang xếp hàng/đã tới nhưng chưa giao coi như bỏ đi, không trừ thêm điểm ngoài quy tắc "khách bỏ đi" ở mục 4); chuyển thẳng sang Tổng kết như kết thúc bình thường, vẫn lưu vào Sổ doanh thu. Có hộp xác nhận ngắn: "Đóng cửa sớm? Khách đang chờ sẽ bỏ đi." Đây là tính năng thật cho người chơi (ví dụ hết nguyên liệu, muốn dừng sớm để tránh rủi ro), không phải nút chỉ để test.
+  3. **Đóng cửa sớm** — dừng ngay việc sinh khách mới, nhưng **không** chuyển Tổng kết ngay nếu còn khách đang đợi/đang chọn — áp dụng đúng luật "phục vụ hết khách đang có" ở mục 31 (khác bản thiết kế cũ: không còn coi khách đang chờ là bỏ đi ngay lập tức). Có hộp xác nhận ngắn: "Đóng cửa sớm? Sẽ không nhận khách mới, nhưng vẫn phục vụ hết khách đang chờ." Đây là tính năng thật cho người chơi (ví dụ hết nguyên liệu, muốn dừng sớm để tránh rủi ro), không phải nút chỉ để test.
   4. **Thoát về Chuẩn bị** — huỷ toàn bộ ngày đang bán: không tính doanh thu ngày đó, không lưu vào Sổ doanh thu, không tăng biến ngày, không trừ tiền thuê mặt bằng của ngày đó. Quay lại tab Chuẩn bị với đúng tiền/tồn kho/tiến độ trước khi vào bán. Có hộp xác nhận rõ ràng: "Thoát sẽ MẤT toàn bộ tiến trình ngày hôm nay, bạn có chắc không?". Dùng khi bấm nhầm hoặc cần test nhanh.
 - Khi menu đang mở, game coi như đang tạm dừng — giống hệt lúc tab trình duyệt bị ẩn (mục iOS trong AGENTS.md).
 
@@ -259,14 +271,15 @@ Thay nút "Mua lố 10" cố định bằng chọn số lượng:
 
 Đây là hệ thống mới lớn nhất trong đợt này. Dùng **giá đại diện của món Cơm tấm** (món bắt buộc có trong mọi đơn) để tính ảnh hưởng chung, tránh phải tính riêng cho từng món:
 
-- Ở tab Chuẩn bị, mỗi món trong mục 3 có thêm ô chỉnh giá bán, bước 1.000đ, giới hạn từ 50% đến 200% giá bán gốc trong bảng mục 3 (không cho chỉnh ra ngoài khung này).
+- Vị trí chỉnh giá, khung nhập (0đ – 1.000.000đ) và cách nhập (gõ số trực tiếp) nay theo mục 32 (tab Giá bán riêng), thay cho bản cũ "chỉnh ngay trong tab Nguyên liệu, giới hạn 50-200% giá gốc, bước 1.000đ".
 - Gọi `p = giá bán hiện tại của Cơm tấm ÷ 15.000` (15.000 là giá gốc Cơm tấm ở mục 3).
 - **Nhãn cảnh báo** hiện cạnh mỗi món đang chỉnh giá (so giá món đó với giá gốc riêng của nó, không phải p chung):
   - tỉ lệ ≤ 0.7: 🟢 "Giá mềm"
   - 0.7 – 1.15: không hiện nhãn (giá bình thường)
   - 1.15 – 1.4: 🟡 "Hơi mắc"
   - > 1.4: 🔴 "Quá mắc"
-- **Ảnh hưởng số khách đến** (áp dụng vào công thức khoảng cách khách ở mục 4): nhân thêm hệ số giá `heSoGia = clamp(1 + (1 - p) × 0.6, 0.6, 1.3)`. Ví dụ p=1 (giá gốc) → hệ số 1 (không đổi); p=0.7 → 1.18 (đông hơn); p=0.5 → 1.3 (chặn trần, đông tối đa); p=1.4 → 0.76 (thưa hơn); p≥1.7 → 0.6 (chặn sàn, thưa tối đa).
+  - = 0đ: nhãn riêng "FREE" thay cho 4 mức trên (xem mục 32).
+- **Ảnh hưởng số khách đến**: tính hệ số giá `heSoGia = clamp(1 + (1 - p) × 0.6, 0.6, 1.3)`, dùng để **chia** vào công thức khoảng cách khách ở mục 4 (không phải nhân — khớp với công thức chia đã cập nhật ở mục 4 và mục 26). Ví dụ p=1 (giá gốc) → hệ số 1 (không đổi); p=0.7 → 1.18 (chia cho 1.18 → khoảng cách ngắn hơn → đông hơn); p=0.5 → 1.3 (chặn trần); p=1.4 → 0.76 (khoảng cách dài hơn → thưa hơn); p≥1.7 → 0.6 (chặn sàn).
 - **Ảnh hưởng sao**: nếu giá món nào đó trong đơn có tỉ lệ so với giá gốc riêng > 1.3, thì trừ thêm 1 sao vào kết quả đã tính ở mục 7 (tối thiểu 1 sao, không trừ xuống dưới 1). Giá rẻ hơn giá gốc KHÔNG được cộng thêm sao.
 - Lợi nhuận/phần vẫn tính đơn giản: giá bán hiện tại − giá vốn (mục 3), không đổi công thức.
 - Đổi giá chỉ áp dụng từ ngày bán tiếp theo, không đổi giữa chừng ngày đang bán (giống luật ở mục 15).
@@ -281,3 +294,221 @@ Thay nút "Mua lố 10" cố định bằng chọn số lượng:
   - Khách du lịch: "Cho em một phần cơm sườn với trà đá ạ!"
   - Shipper: "Đơn giao gấp giùm em, cơm sườn 2 phần!"
 - **Khách quen (bản đơn giản, theo loại khách chứ không theo từng khách cá nhân)**: đếm số lần mỗi loại khách được phục vụ đạt từ 4 sao trở lên (bộ đếm riêng cho từng loại, lưu trong state, không giới hạn). Từ lần thứ 5 trở đi, mỗi lượt loại khách đó xuất hiện có 20% cơ hội là "khách quen": thêm nhãn nhỏ "Khách quen" trên bong bóng đơn, kiên nhẫn +10%, tiền boa +5 điểm phần trăm so với mục 4. Không cần lưu ID từng khách cụ thể, giữ đơn giản.
+
+## 26. Sao quán ảnh hưởng số lượng khách
+
+- Thêm hệ số `heSoSao` dựa trên "Sao quán" hiện tại (mục 7, trung bình 20 đánh giá gần nhất), dùng **chia** vào công thức khoảng cách khách ở mục 4 — cùng vị trí và cùng cách heSoGia đang hoạt động (mục 24), không phải một hệ thống riêng.
+- Bảng hệ số:
+  | Sao quán | heSoSao | Hiệu ứng ví dụ (base 10 khách) |
+  |---|---|---|
+  | ≥ 4.5 | 1.25 | ~12-13 khách |
+  | 4.0 – 4.49 | 1.0 | ~10 khách (không đổi) |
+  | 3.0 – 3.99 | 0.9 | ~9 khách |
+  | 2.0 – 2.99 | 0.8 | ~8 khách |
+  | < 2.0 | 0.7 | ~7 khách |
+- Cố ý chọn mức thay đổi nhẹ (không giảm/tăng quá 30%) để không làm người chơi nản khi sao thấp — đúng yêu cầu ban đầu.
+- Công thức đầy đủ ở mục 4 sau khi có cả heSoGia và heSoSao: `khoảng cách = (thời lượng bán giây / số khách) / (1 + bonus bảng hiệu) / heSoSao / heSoGia`.
+
+## 27. Hiển thị tồn kho + gợi ý nguyên liệu cần khi Bán hàng
+
+- Mọi nút món trong khay ở màn Bán hàng (cơm, sườn, bì, trứng, chả, canh, nước mắm, nước giải khát) hiện dạng "Tên (số tồn kho)", không chỉ riêng sườn như trước.
+- Khi 1 khách đang được chọn: các nút món mà đơn của khách đó còn cần (theo order dạng chữ ở mục 25) có viền xanh nổi bật (ví dụ `border: 2px solid #6aa84f` hoặc `box-shadow` xanh lá). Món khách không gọi hoặc đã lắp đủ số lượng cần thì giữ viền thường.
+- Highlight cập nhật lại ngay khi: đổi khách đang chọn, hoặc vừa lắp thêm 1 món vào đĩa/hộp.
+
+## 28. Ăn tại quán / Mang đi
+
+- Mỗi khách khi xuất hiện được gán ngẫu nhiên loại phục vụ: 🍽 **Tại quán** (60%) hoặc 🥡 **Mang đi** (40%). Hiện icon loại phục vụ nhỏ trên bong bóng đơn của khách.
+- Bước đầu tiên bắt buộc khi bắt đầu lắp đơn (thay cho khái niệm "đĩa trống" cũ): chạm nút **🍽 Dĩa** hoặc **📦 Hộp**. Chỉ sau khi chọn đúng loại, các nút món khác mới bấm được.
+- Nếu khách Mang đi: sau khi chọn Hộp, phải chạm thêm nút **🛍 Bọc** (coi như 1 thao tác bắt buộc, không tốn nguyên liệu, không cộng/trừ tiền) trước khi Giao được kích hoạt.
+- Nếu giao sai loại (chọn Dĩa cho khách Mang đi, chọn Hộp nhưng thiếu Bọc, hoặc chọn Hộp cho khách Tại quán) → tính như **sai/thiếu 1 món** ở mục 7 (xem thêm mục 37).
+- Không tính thêm chi phí nguyên liệu cho dĩa/hộp/bọc ở bản này — giữ đơn giản.
+
+## 29. Nước mắm cay / không cay
+
+- Thêm 2 nguyên liệu mới vào mục 3: **Nước mắm cay** (có ớt) và **Nước mắm thường** (không ớt), giá bán +0đ (miễn phí kèm theo, giống đồ chua), giá vốn 500đ/phần mỗi loại, mua/tồn kho như nguyên liệu khác (mục 23).
+- 50% số khách có yêu cầu cụ thể trong order (hiện rõ trong dòng chữ order, mục 25, ví dụ "Cơm sườn + nước mắm cay"), chia đều cay/không cay (25%/25%). 50% còn lại không yêu cầu gì — giao loại nào cũng được, không ảnh hưởng đánh giá.
+- Nếu khách có yêu cầu cụ thể mà giao thiếu hoặc sai loại nước mắm → tính như **sai/thiếu 1 món** ở mục 7 (xem mục 37).
+
+## 30. Báo hết món — khách bỏ đi không tính sao
+
+- Kiểm tra khi cần: nếu đơn của khách đang chọn cần 1 món mà **không còn cách nào có được trong ngày hôm đó**:
+  - Với nguyên liệu lấy trực tiếp (cơm, bì, trứng, chả, canh, nước mắm, nước giải khát): tồn kho hiện tại = 0.
+  - Riêng **sườn**: chỉ tính là hết khi ĐỒNG THỜI tồn kho sườn sống = 0, khay sườn chín = 0, và không còn miếng nào đang trên vỉ (đã đặt nhưng chưa chín) — tức chờ thêm cũng vô ích.
+- Khi đúng điều kiện trên, nút **⚠️ Báo hết món** hiện được cạnh nút Đổ đĩa. Bấm vào: hộp xác nhận "Báo hết [tên món] với khách, khách sẽ bỏ đi. Không tính sao/tiền cho đơn này." → đồng ý thì khách rời hàng ngay lập tức.
+- Đơn này **không** được tính vào: phân bố sao (mục 21), "Sao quán" (mục 7), hay bộ đếm "Khách bỏ đi" hiện có (do hết kiên nhẫn). Thay vào đó tăng 1 bộ đếm riêng "Khách bỏ đi vì hết món", hiện thành 1 dòng riêng ở Tổng kết và Sổ doanh thu (mục 17): "Khách bỏ đi vì hết món: X" — tách biệt hoàn toàn với dòng "Khách bỏ đi" cũ.
+
+## 31. Hết giờ vẫn phục vụ hết khách đang đợi
+
+- Khi đồng hồ hết giờ **hoặc** người chơi bấm "Đóng cửa sớm" (mục 19): lập tức dừng sinh khách mới, nhưng KHÔNG chuyển sang Tổng kết ngay nếu vẫn còn khách trong hàng đợi hoặc đang được chọn.
+- Trong lúc này, HUD thay phần đồng hồ/thanh tiến trình bằng dòng chữ nhỏ "Đang đóng cửa...". Người chơi tiếp tục phục vụ các khách còn lại như bình thường; khách hết kiên nhẫn vẫn bỏ đi đúng luật mục 4 (không được gia hạn thêm kiên nhẫn vì đã hết giờ).
+- Khi hàng đợi trống hẳn (0 khách đang đợi, 0 khách đang chọn) → tự động chuyển sang Tổng kết như bình thường.
+- Áp dụng thống nhất cho cả 2 trường hợp "hết giờ tự nhiên" và "Đóng cửa sớm" — mục 19 đã cập nhật lại theo đúng luật này (không còn hành vi "khách đang chờ tự bỏ đi ngay" như thiết kế cũ).
+
+## 32. Tab Giá bán riêng (giao diện bảng menu)
+
+- Tách phần chỉnh giá bán ra khỏi tab Nguyên liệu, làm thành tab con thứ 3 trong Chuẩn bị: **Nguyên liệu | Nâng cấp | Giá bán | Nước** (mục 33 là tab con thứ 4).
+- Giao diện tab Giá bán: nền tối (đen/nâu đậm) mô phỏng bảng menu quán ăn, chữ trắng/vàng, không cần hình ảnh minh họa — chỉ cần CSS màu nền + font, không cần ảnh nền phức tạp.
+- Mỗi dòng: tên món — giá hiện tại — **ô nhập số tùy ý** (không dùng nút +/-, người chơi gõ trực tiếp số tiền mới rồi xác nhận/blur để áp dụng).
+- Ràng buộc: tối thiểu **0đ**, tối đa **1.000.000đ**. Nhập ngoài khung này thì tự kẹp về 0 hoặc 1.000.000. Nhập không phải số thì bỏ qua, giữ giá cũ.
+- Nếu giá = 0đ: hiện nhãn **"FREE"** thay cho 4 mức nhãn cảnh báo ở mục 24 (món đó khách vẫn nhận được nhưng không cộng doanh thu phần giá món này).
+- Đây là nơi duy nhất chỉnh được giá bán (thay cho việc chỉnh ngay trong tab Nguyên liệu ở thiết kế M16 cũ). Các công thức nhãn cảnh báo, `heSoGia`, ảnh hưởng sao vẫn giữ nguyên như mục 24, chỉ đổi giao diện và khung nhập.
+- Đổi giá chỉ áp dụng từ ngày bán tiếp theo (không đổi, giữ nguyên luật cũ).
+
+## 33. Tab con "Nước" (đồ uống)
+
+- Tab con thứ 4 trong Chuẩn bị (sau Giá bán). Trà đá chuyển từ tab Nguyên liệu sang đây (vẫn thuộc thực đơn mục 3 về mặt số liệu, chỉ đổi vị trí UI).
+- Danh sách nước (đặt tên tránh thương hiệu thật):
+
+| Mã | Tên | Giá bán | Giá vốn/phần | Mở khóa |
+|---|---|---|---|---|
+| tra | Trà đá | +5.000 | 1.000 | Có sẵn từ ngày 1 |
+| xaxi | Xá xị Cô Ba | +10.000 | 4.000 | Nâng cấp "Tủ nước giải khát" (mục 8) |
+| camep | Cam ép | +12.000 | 5.000 | Nâng cấp "Tủ nước giải khát" |
+| suadau | Sữa đậu nành | +8.000 | 3.000 | Nâng cấp "Tủ nước giải khát" |
+
+- Mua/tồn kho/hao qua đêm áp dụng như nguyên liệu thường (mục 3, 22, 23) — không hao qua đêm trừ khi sau này có luật riêng.
+- Sau khi mua nâng cấp "Tủ nước giải khát", cả 3 loại nước mới mở cùng lúc (không mở lẻ từng loại), và có thể xuất hiện trong order ngẫu nhiên như các món khác — không cần công thức tỉ lệ riêng, dùng chung cơ chế chọn món thêm ngẫu nhiên đã có (xem thêm mục 36 về việc đảm bảo chọn đều).
+
+## 34. Biến động giá vốn theo sự kiện (làm được ngay, không cần chờ M11)
+
+Tách riêng khỏi mục 9 (sự kiện ngẫu nhiên đầy đủ, vẫn PAUSED) vì đây là phần nhỏ, làm được độc lập ngay bây giờ:
+
+- Từ ngày 3 trở đi, mỗi ngày có 20% cơ hội xảy ra **đúng 1** trong 2 biến động sau (10%/10%, không xảy ra đồng thời cả hai):
+  - **Sườn tăng giá**: giá vốn sườn +30% chỉ trong ngày đó.
+  - **Trứng được mùa**: giá vốn trứng −40% chỉ trong ngày đó.
+- Hiện thông báo ngắn ở đầu ngày (tab Quán hoặc lúc vào Chuẩn bị): ví dụ "📢 Hôm nay giá sườn nhập vào tăng 30%!".
+- Không ảnh hưởng gì khác (không đổi giá bán, không đổi số khách, không đổi sao) — chỉ đổi giá vốn hiển thị và số tiền trừ khi mua ngày hôm đó.
+- **Giá gốc dùng để tính nhãn cảnh báo cũng dịch chuyển theo cùng tỉ lệ, chỉ cho món đang bị ảnh hưởng**: khi "Sườn tăng giá" xảy ra, giá gốc dùng để tính nhãn 🟢/🟡/🔴 và ngưỡng trừ sao (mục 24, 32) của riêng món Sườn được nhân thêm cùng % biến động giá vốn ngày đó (`giá gốc hiệu chỉnh = giá gốc gốc × (1 + %biến động)`). Ví dụ: Sườn tăng giá vốn +30% ngày đó → giá gốc hiệu chỉnh của Sườn cũng +30% hôm đó (người chơi tăng giá bán Sườn tương ứng để bù chi phí sẽ KHÔNG bị gắn nhãn "mắc" oan). "Trứng được mùa" (giá vốn -40%) áp dụng tương tự nhưng theo chiều giảm cho món Trứng. Các món không bị sự kiện tác động thì giá gốc giữ nguyên như mục 3.
+- Không ảnh hưởng tới `heSoGia` (hệ số khách đến ở mục 24) — hệ số đó vẫn luôn tính theo giá Cơm tấm, và sự kiện ở mục này không tác động tới Cơm tấm.
+- Đây là bản rút gọn; các sự kiện ảnh hưởng khách/kiên nhẫn (mưa, tan học, cúp điện, khen trên mạng) vẫn để nguyên trong mục 9, chờ làm cùng M11.
+
+## 35. Combo
+
+- Thêm khu vực "Combo" trong cùng tab Giá bán (mục 32), dưới danh sách món lẻ.
+- Người chơi tự tạo tối đa **3 combo** (Combo 1/2/3). Mỗi combo: chọn 2-4 món có sẵn (từ mục 3 và mục 33) + tự nhập 1 giá bán trọn gói. **Giá combo bị giới hạn trong khung 50%-100% tổng giá bán lẻ HIỆN TẠI** (theo giá đang áp dụng ở tab Giá bán, mục 32) của các món đã chọn — không được đặt cao hơn mua lẻ cộng lại (mất ý nghĩa combo, dễ lợi dụng để né nhãn giá mắc mà không bị phạt sao) và không được thấp hơn 50% (tránh phá giá vốn quá đà). UI tự hiện tổng giá lẻ tham khảo ngay khi chọn đủ món, kẹp giá nhập về biên nếu vượt khung — dùng đúng cơ chế nhập số + kẹp biên đã có ở mục 32, chỉ đổi khung từ "0-1.000.000" thành "50%-100% tổng giá lẻ".
+- Một combo chỉ "bật" (có thể xuất hiện trong order) khi đã chọn đủ ít nhất 2 món và đặt giá hợp lệ.
+- Khi khách xuất hiện, nếu có ít nhất 1 combo đang bật: 20% cơ hội khách order thẳng theo tên combo (order hiển thị "Combo 1" thay vì liệt kê từng món). Người chơi lắp đủ các món đã cấu hình trong combo đó rồi giao bình thường; tiền tính theo giá combo đã đặt (không cộng riêng từng món trong đó).
+- Nếu tại thời điểm đó combo không đủ điều kiện phục vụ (1 trong các món cấu thành đã hết theo luật mục 30) thì dùng đúng cơ chế "Báo hết món" ở mục 30 (không đánh giá).
+- Combo không cần nguyên liệu hay giá vốn riêng — chỉ là gói giá + danh sách món tham chiếu tới mục 3/33.
+
+## 36. Mở rộng bộ dữ liệu mẫu (giảm lặp lại)
+
+Hiểu theo hướng "tăng độ đa dạng dữ liệu có sẵn trong code", không phải thêm loại khách mới:
+
+- Tăng số tên khách giả ở mục 21 từ 15 lên **30 tên** (thêm 15 tên Việt Nam khác vào `data.js`).
+- Tăng số câu thoại mỗi loại khách ở mục 25 từ 2-3 câu lên **4-5 câu/loại**.
+- Đảm bảo hàm chọn "món thêm" ngẫu nhiên (mục 4) chọn đều trên toàn bộ danh sách món khả dụng tại thời điểm đó (bao gồm cả nước ở mục 33, nước mắm ở mục 29 nếu khách thuộc nhóm có yêu cầu) — không hard-code thiên vị vài món cố định.
+
+## 37. Cập nhật luật đánh giá theo các tính năng mới (mục 26-36)
+
+Tổng hợp lại để không rơi rớt khi code — tất cả đều dùng lại đúng khung đã có ở mục 7 và mục 21, không tạo thang điểm mới:
+
+- **Sai loại phục vụ** (mục 28: nhầm dĩa/hộp, thiếu bọc khi mang đi) → tính như "sai/thiếu 1 món" ở mục 7 (2 sao nếu đây là lỗi duy nhất của đơn).
+- **Sai/thiếu nước mắm theo yêu cầu** (mục 29, chỉ tính khi khách có yêu cầu rõ) → tính như "sai/thiếu 1 món" ở mục 7.
+- **Combo giao thiếu món cấu thành** (mục 35) → đếm số món thiếu trong combo đó, áp dụng đúng bảng mục 7 (thiếu 1 món = 2 sao, thiếu từ 2 món = 1 sao).
+- **Khách bỏ đi vì hết món** (mục 30) → KHÔNG tạo đánh giá, không tính vào mục 7 lẫn mục 21, có bộ đếm riêng như đã nêu ở mục 30.
+- Ở tab Đánh giá (mục 21), các lỗi "sai loại phục vụ" và "sai/thiếu nước mắm" xếp chung vào nhóm lý do "sai/thiếu món" đã có sẵn, dùng lại đúng bộ câu bình luận cũ — không cần soạn thêm câu mẫu riêng cho từng lỗi mới.
+
+## 38. Nhân viên (tách "chị Hai" thành 2 vị trí độc lập)
+
+Thay cho nâng cấp "Thuê chị Hai phụ bếp" (1 gói duy nhất) bằng **2 nhân viên mua riêng biệt**, thao tác hoàn toàn độc lập với nhau — mua 1 người không tự mở người kia.
+
+### Nhân viên Nướng — 350.000đ
+- Khi đã thuê: tự động nhấc bất kỳ miếng sườn nào vừa đạt ngưỡng chín vàng (60-90%, mục 5) khỏi vỉ, đưa thẳng vào khay sườn — người chơi không cần tự canh giờ nhấc miếng đó nữa (vẫn có thể tự tay xử lý các miếng khác cùng lúc nếu muốn).
+- **Cơ chế lỗi**: mỗi miếng do Nhân viên Nướng xử lý có 2% xác suất độc lập bị hỏng thành phế thay vì vào khay bình thường (mất vốn, không cộng khay) — tương đương trung bình cứ khoảng 10 miếng nhân viên xử lý thì có ~20% khả năng gặp 1 miếng hỏng kiểu này. Không thông báo trước, chỉ thấy khay sườn không tăng như mong đợi.
+
+### Nhân viên Làm món — 350.000đ
+- Khi đã thuê: mỗi 10 giây tự động lắp giúp 1 món còn thiếu vào đĩa/hộp của khách đang được chọn (ưu tiên món dễ lấy: bì, trứng, cơm, nước mắm, nước giải khát — không tự ý đụng vào sườn).
+- **Cơ chế lỗi**: mỗi lần thực hiện 1 thao tác tự lắp, có 1% xác suất độc lập lắp sai (chọn nhầm 1 món khác không thuộc đơn đó) — tương đương trung bình cứ khoảng 10 lần thao tác thì có ~10% khả năng gặp 1 lần lắp sai. Nếu người chơi không phát hiện và sửa bằng nút Đổ đĩa trước khi Giao, đơn đó bị tính sai/thiếu món theo đúng bảng ở mục 7 như lỗi thường — không tạo luật chấm điểm riêng cho lỗi do nhân viên gây ra.
+
+### Lương và cho nghỉ
+- Mỗi nhân viên đã thuê tốn **40.000đ/ngày**, trừ lúc Tổng kết (mục 2), cộng dồn nếu thuê cả 2 (tối đa 80.000đ/ngày). Hiện thành dòng riêng "Lương nhân viên" ở Tổng kết và Sổ doanh thu (mục 17), tách biệt với "Thuê mặt bằng".
+- Ở tab Chuẩn bị (khu vực nâng cấp, cạnh mỗi nhân viên đã thuê): có công tắc bật/tắt "Cho nghỉ hôm nay" cho từng người, chỉnh riêng lẻ. Ngày nào bật "Cho nghỉ": nhân viên đó không hoạt động ngày đó (không có cơ chế hỗ trợ lẫn cơ chế lỗi), và KHÔNG bị trừ lương ngày đó. Cài đặt "cho nghỉ" chỉ áp dụng cho ngày tiếp theo, giống các thay đổi khác ở Cài đặt (mục 15, 16).
+- Mua thêm 1 nhân viên là vĩnh viễn (giống các nâng cấp khác) — "cho nghỉ" chỉ là tạm dừng theo ngày, không phải sa thải/hoàn tiền.
+
+## 39. Đồng bộ save ẩn danh lên Supabase (không tài khoản, không mật khẩu)
+
+Mục tiêu: giúp bạn (người phát triển) xem được có ai đang chơi, quán tên gì, chơi tới đâu, và có 1 bản sao lưu ngoài máy người chơi để hỗ trợ khôi phục khi cần — mà KHÔNG bắt người chơi đăng ký/đăng nhập gì cả. Đây vẫn là "lưu local trước", cloud chỉ là bản sao chạy nền.
+
+### Kiến trúc
+- 1 bảng duy nhất `game_saves` trên Supabase (dịch vụ có sẵn, gói free đủ dùng: 500MB database, 2GB băng thông/tháng).
+- Cột: `anon_id` (text, khóa chính), `shop_name` (text), `day` (int), `money` (bigint), `star` (numeric), `save_blob` (text — chính là chuỗi "ID sao lưu" base64 đã có ở mục 16), `created_at`, `updated_at`.
+- Không dùng Supabase Auth, không đăng nhập — chỉ dùng "anon public key" (theo đúng thiết kế của Supabase, key này an toàn để để công khai trong code frontend vì quyền hạn được kiểm soát bằng Row Level Security, không phải bằng giấu key).
+
+### Luồng hoạt động
+1. Lần đầu chơi (chưa có `anonId`): sinh `state.anonId = crypto.randomUUID()`, lưu vào state như các field khác (tự động nằm trong "ID sao lưu" khi xuất mã, không cần xử lý thêm).
+2. Mỗi lần `saveState()` chạy (đúng các điểm đã có sẵn: sau mua hàng, sau nâng cấp, sau Tổng kết, sau đổi Cài đặt) → lưu localStorage như cũ, ĐỒNG THỜI gọi `syncToCloud()` chạy nền, không chặn UI. Debounce tối thiểu 5 giây giữa 2 lần gọi (gộp lại nếu gọi liên tục).
+3. `syncToCloud()` gửi upsert (insert nếu chưa có `anon_id`, update nếu đã có) với đầy đủ các cột ở trên.
+4. Lỗi mạng khi đồng bộ: bỏ qua âm thầm, không hiện thông báo lỗi cho người chơi, thử lại ở lần lưu tiếp theo. Không bao giờ chặn hoặc làm chậm trải nghiệm chơi vì lý do mạng.
+5. Lúc mở app: KHÔNG gọi cloud để tải — chỉ đọc localStorage như thiết kế cũ, giữ trải nghiệm chơi offline-first.
+6. Khi Nhập "ID sao lưu" (mục 16): sau khi giải mã, nếu chuỗi mã đó có `anonId`, dùng lại đúng `anonId` đó để tiếp tục đồng bộ vào đúng dòng cũ trên Supabase (không tạo dòng mới, không phân mảnh dữ liệu cùng 1 người chơi giữa nhiều thiết bị/lần nhập mã).
+
+### Khôi phục khi người chơi mất save
+- **Mất save nhưng trình duyệt/localStorage còn nguyên** (ví dụ bug làm hỏng đúng phần save): có thể tự động thử tải lại từ cloud bằng `anonId` đã lưu — cân nhắc làm ở mốc sau nếu cần, bản đầu chỉ cần chiều lưu lên (upload), chưa cần chiều tải xuống tự động để giữ đơn giản.
+- **Mất sạch (xoá toàn bộ dữ liệu web, đổi máy không có mã)**: không có cách tự động (vì không có đăng nhập), nhưng bạn có thể vào Supabase, tìm theo `shop_name` (và thời điểm gần đúng), lấy `save_blob`, gửi lại cho người chơi để họ tự dán vào ô "Nhập ID sao lưu". Đây là cải thiện thật so với hiện trạng (hiện tại bạn không có gì để giúp).
+- Nên có 1 dòng nhỏ minh bạch trong Cài đặt: "Dữ liệu quán được tự động sao lưu ẩn danh để hỗ trợ khôi phục khi cần." — không thu thập âm thầm mà không thông báo.
+
+### Việc bạn cần tự làm (ngoài phần AI code)
+1. Tạo tài khoản Supabase (free), tạo 1 project mới.
+2. Vào SQL Editor, chạy đoạn SQL sau để tạo bảng và quyền truy cập:
+```sql
+create table game_saves (
+  anon_id text primary key,
+  shop_name text,
+  day integer,
+  money bigint,
+  star numeric,
+  save_blob text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table game_saves enable row level security;
+
+create policy "anon insert" on game_saves for insert to anon with check (true);
+create policy "anon update" on game_saves for update to anon using (true) with check (true);
+create policy "anon select" on game_saves for select to anon using (true);
+
+create or replace function set_updated_at() returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_set_updated_at before update on game_saves
+for each row execute function set_updated_at();
+```
+3. Vào Settings → API, copy "Project URL" và "anon public key", dán vào `js/cloud-config.js`.
+4. Xem dữ liệu người chơi bất cứ lúc nào qua Table Editor có sẵn của Supabase — không cần code thêm gì để "xem".
+
+### Giới hạn cần chấp nhận (đánh đổi hợp lý cho 1 game free ẩn danh)
+- `anon_id` là UUID ngẫu nhiên 122-bit, thực tế không đoán được, nhưng về lý thuyết ai có đúng chuỗi đó có thể ghi đè dữ liệu dòng đó (vì không có xác thực thật). Chấp nhận được vì không có thông tin nhạy cảm (không email, không mật khẩu, không số điện thoại).
+- Không tự động khôi phục nếu người chơi mất sạch dữ liệu VÀ không liên hệ bạn — đây là giới hạn cố hữu của mô hình "không tài khoản".
+
+## 40. Nguyên liệu VIP: Tóp mỡ
+
+- **Điều kiện đủ để mở khóa**: tại ĐÚNG 1 thời điểm kiểm tra, `ngày hiện tại ≥ 15` VÀ `tiền hiện tại ≥ 5.000.000đ` phải cùng đúng — đây là 1 phép kiểm tra gộp (AND) tại cùng một khoảnh khắc, KHÔNG được cài thành 2 cờ riêng rồi gộp sau (ví dụ SAI: lưu "đã từng đạt ngày 15" và "đã từng có 5 triệu" ở hai thời điểm khác nhau rồi coi là đủ điều kiện khi cả hai cờ đều true — như vậy sẽ mở khóa oan cho trường hợp ngày 5 từng có 5 triệu rồi tiêu hết, sau đó ngày 15 tới mà không còn đủ tiền). Đúng theo ví dụ: ngày 14 dù đủ 5 triệu → chưa đủ (ngày chưa tới 15); ngày 15 chưa đủ tiền → chưa đủ; ngày 16 chưa đủ tiền → chưa đủ; ngày 20 đủ tiền → đủ điều kiện.
+- Kiểm tra phép AND này tại mọi thời điểm tiền có thể thay đổi (mua hàng, nhận tiền sau đơn, Tổng kết) kể từ ngày 15 trở đi. Việc bắt buộc cả 2 điều kiện đúng cùng lúc khiến "đóng cửa sớm liên tục để đẩy nhanh ngày" mà không bán được gì không còn tác dụng — vẫn phải có tiền thật trong túi đúng lúc đã qua ngày 15.
+- **Khi vừa đủ điều kiện lần đầu tiên**: KHÔNG tự động mở khóa ngay. Hiện 1 nút/thông báo nổi bật "🔓 Mở khóa Tóp mỡ" (ví dụ ở tab Quán hoặc đầu tab Chuẩn bị). Nút này giữ nguyên, không tự biến mất kể cả nếu sau đó tiền giảm xuống dưới 5 triệu — nó đại diện cho "cơ hội đã đạt được, chờ xác nhận".
+- Người chơi phải **chủ động bấm** nút đó để chính thức mở khóa (không tốn tiền, đây chỉ là bước xác nhận/ăn mừng, giống 1 cột mốc thành tựu). Sau khi bấm: `state.tomMoUnlocked = true` vĩnh viễn, Tóp mỡ trở thành nguyên liệu bình thường trong tab Nguyên liệu — nhập hàng, mua/tồn kho, bán hằng ngày y như các món khác (mục 23), không cần điều kiện gì thêm về sau.
+- **Số liệu**: giá vốn 15.000đ/phần (đắt hơn hẳn nguyên liệu khác, đúng chất "VIP"), mua/tồn kho theo cơ chế thường (mục 23). Hao qua đêm 70% nếu chưa có Tủ lạnh (cao hơn sườn/chả, vì đồ tươi cao cấp mau hư — giữ cảm giác quý hiếm, tránh mua tích trữ vô tội vạ).
+- **Cách dùng**: sau khi mở khóa, người chơi có thể **tự ý thêm** Tóp mỡ vào bất kỳ đĩa/hộp nào đang làm (không phải do khách yêu cầu, không nằm trong order gốc) — giống 1 topping tự chọn thêm để "nâng cấp món ăn", tốn 1 phần trong kho + cộng 25.000đ vào giá đơn đó. Vì không thuộc order gốc, thêm Tóp mỡ KHÔNG BAO GIỜ bị tính là "thừa món" hay bị trừ điểm — chỉ có thể cộng, không thể trừ.
+- **Hiệu ứng "quyết định độ ngon"**: nếu đơn có Tóp mỡ và đơn đó đạt từ 3 sao trở lên theo cách chấm bình thường (mục 7, 37), cộng thêm 1 sao (tối đa 5 sao). Đồng thời tiền boa của đơn đó +10 điểm phần trăm so với mức thường (cộng dồn được với bonus khách quen ở mục 25 nếu có).
+
+## 41. Trả lời đánh giá của khách
+
+- Trong tab Đánh giá (mục 21), mỗi đánh giá trong danh sách 30 đánh giá gần nhất có thêm nút "Trả lời" (giống Google Maps). Chạm vào mở ô nhập text ngắn (tối đa ~150 ký tự), lưu lại và hiện thành 1 dòng thụt vào bên dưới đánh giá đó, gắn nhãn "🏪 Chủ quán đã trả lời".
+- Chỉ trả lời được các đánh giá còn trong danh sách 30 gần nhất (khi đánh giá bị đẩy ra khỏi danh sách do có đánh giá mới hơn, câu trả lời cũ cũng mất theo — không cần lưu trữ vĩnh viễn).
+- **Đây thuần là tính năng hiển thị/nhập vai cho vui, KHÔNG có công thức ảnh hưởng gì tới sao, tiền hay bất kỳ số liệu gameplay nào** — giữ đúng tinh thần đơn giản, tránh tạo thêm 1 hệ thống cân bằng mới không cần thiết. Có thể để trống, sửa lại, hoặc xoá câu trả lời bất cứ lúc nào.
+
+## 42. Gợi ý thêm — Best-seller trong tuần (tùy chọn, không bắt buộc)
+
+- Tab Quán (dashboard) hiện thêm 1 dòng nhỏ: "🔥 Best-seller 7 ngày qua: [tên món]" — món có số lần được giao nhiều nhất trong 7 ngày gần nhất, tính từ dữ liệu order đã có (thêm 1 bộ đếm nhỏ mỗi khi giao đơn thành công, không cần bảng riêng phức tạp).
+- Thuần cosmetic, không ảnh hưởng gameplay, chỉ tận dụng dữ liệu đã có sẵn để tạo cảm giác "quán đang sống" mỗi lần mở tab Quán.
+
+## 43. Gợi ý thêm — Mốc thưởng theo số ngày (tùy chọn, không bắt buộc)
+
+- Khi đạt các mốc ngày 7 / 15 / 30 / 50 / 100 (bắt đầu ngày đó), hiện 1 popup chúc mừng ngắn (1-2 câu giọng Cô Ba) kèm thưởng tiền mặt nhỏ: ngày 7: +20.000đ, ngày 15: +50.000đ (trùng đúng mốc mở khóa Tóp mỡ ở mục 40, tạo cảm giác "ngày trọng đại"), ngày 30: +100.000đ, ngày 50: +150.000đ, ngày 100: +300.000đ.
+- Dùng lại đúng kiểu thông báo đầu ngày đã thiết kế ở mục 34 (biến động giá vốn) — không cần dựng UI mới.
+- Mỗi mốc chỉ thưởng 1 lần duy nhất trong suốt 1 lượt chơi (lưu cờ đã nhận trong state), tránh lặp lại nếu người chơi qua lại ngày đó bằng cách nào đó.

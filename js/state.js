@@ -16,6 +16,8 @@ export const initialState = {
     trung: 0,
     canh: 0,
     tra: 0,
+    mam_cay: 20,
+    mam_thuong: 20,
   },
   upgrades: {},
   lastSummary: null,
