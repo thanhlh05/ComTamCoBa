@@ -18,6 +18,9 @@ export const initialState = {
     tra: 0,
     mam_cay: 20,
     mam_thuong: 20,
+    xa_xi: 0,
+    cam_ep: 0,
+    sua_dau: 0,
   },
   upgrades: {},
   lastSummary: null,
@@ -30,13 +33,29 @@ export const initialState = {
   shopName: '',
   tutorialDone: false, // Cài đặt giờ mở/đóng và thời lượng bán (mục 15, 16)
   guideSeen: false, // đã xem hướng dẫn 4 thẻ lần đầu (mục 18)
+  // M26 — sự kiện giá vốn ngày hiện tại (null | { id, itemId, costMult, name, message })
+  todayCostEvent: null,
   openHour: 5,
   closeHour: 23,
   dayDurationMinutes: 3,
   // M16 — giá bán (active = đang bán; pending = chỉnh ở Chuẩn bị, áp dụng ngày sau)
   menuPrices: {},
   pendingMenuPrices: {},
-    // M17 — số lần phục vụ ≥4★ theo loại khách (khách quen)
+  // M27 — giá combo
+  comboPrices: {},
+  pendingComboPrices: {},
+
+  // M29 — cho nghỉ hôm nay (áp dụng ngày tiếp theo)
+  staffRestPending: {
+    staffGrill: false,
+    staffCook: false,
+  },
+  staffRestActive: {
+    staffGrill: false,
+    staffCook: false,
+  },
+
+  // M17 — số lần phục vụ ≥4★ theo loại khách (khách quen)
   typeServeGood: {},
 };
 
@@ -71,6 +90,14 @@ export function loadState() {
         ...(parsed.inventory || {}),
       },
       upgrades: { ...(parsed.upgrades || {}) },
+      staffRestPending: {
+        staffGrill: Boolean(parsed.staffRestPending?.staffGrill),
+        staffCook: Boolean(parsed.staffRestPending?.staffCook),
+      },
+      staffRestActive: {
+        staffGrill: Boolean(parsed.staffRestActive?.staffGrill),
+        staffCook: Boolean(parsed.staffRestActive?.staffCook),
+      },
       revenueHistory: Array.isArray(parsed.revenueHistory) ? parsed.revenueHistory : [],
       guideSeen: Boolean(parsed.guideSeen) || Boolean(parsed.tutorialDone),
             starCounts: {
@@ -84,6 +111,8 @@ export function loadState() {
       typeServeGood: { ...(parsed.typeServeGood || {}) },
       menuPrices: { ...(parsed.menuPrices || {}) },
       pendingMenuPrices: { ...(parsed.pendingMenuPrices || {}) },
+      comboPrices: { ...(parsed.comboPrices || {}) },
+      pendingComboPrices: { ...(parsed.pendingComboPrices || {}) },
     };
     return activeState;
   } catch (error) {
@@ -129,10 +158,76 @@ export function applyOvernightSpoilage(state = getState()) {
  */
 export function startNewDay(state = getState()) {
   state.day = (Number(state.day) || 1) + 1;
+
   applyOvernightSpoilage(state);
-  // Giá pending → active do summary.js gọi applyPendingPrices trước/sau
+
+  state.todayCostEvent = null;
+  rollTodayCostEvent(state);
+
+  // M29 — áp dụng "cho nghỉ" đã chọn từ hôm trước
+  state.staffRestActive = {
+    staffGrill: Boolean(state.staffRestPending?.staffGrill),
+    staffCook: Boolean(state.staffRestPending?.staffCook),
+  };
+
   saveState(state);
   return state;
+}
+
+/**
+ * M26 — gieo sự kiện giá vốn cho ngày hiện tại (gọi khi bắt đầu ngày / vào Chuẩn bị lần đầu trong ngày).
+ * 20% từ ngày 3: 50/50 Sườn +30% hoặc Trứng -40%.
+ */
+export function rollTodayCostEvent(state = getState()) {
+  const cfg = GAME_DATA.costEvents;
+  if (!cfg) {
+    state.todayCostEvent = null;
+    return null;
+  }
+  const day = Number(state.day) || 1;
+  if (day < (cfg.fromDay ?? 3)) {
+    state.todayCostEvent = null;
+    saveState(state);
+    return null;
+  }
+  // Đã có sự kiện cho đúng ngày này thì giữ
+  if (state.todayCostEvent && state.todayCostEvent.forDay === day) {
+    return state.todayCostEvent;
+  }
+  if (Math.random() >= (cfg.chance ?? 0.2)) {
+    state.todayCostEvent = null;
+    saveState(state);
+    return null;
+  }
+  const list = cfg.list || [];
+  if (!list.length) {
+    state.todayCostEvent = null;
+    saveState(state);
+    return null;
+  }
+  const pick = list[Math.floor(Math.random() * list.length)];
+  state.todayCostEvent = {
+    id: pick.id,
+    name: pick.name,
+    itemId: pick.itemId,
+    costMult: pick.costMult,
+    message: pick.message,
+    forDay: day,
+  };
+  saveState(state);
+  return state.todayCostEvent;
+}
+
+/** Giá vốn hiệu lực hôm nay (có nhân sự kiện M26 nếu có) */
+export function getEffectiveCost(itemId, state = getState()) {
+  const item = GAME_DATA.menu[itemId];
+  if (!item) return 0;
+  let cost = Number(item.cost) || 0;
+  const ev = state.todayCostEvent;
+  if (ev && ev.itemId === itemId && Number(ev.costMult) > 0) {
+    cost = Math.round(cost * Number(ev.costMult));
+  }
+  return cost;
 }
 
 /**
@@ -147,7 +242,13 @@ export function buyIngredient(itemId, batchCount = 10, state = getState()) {
     return { success: false, error: 'Chưa mở khóa nâng cấp' };
   }
 
-  const cost = item.cost * batchCount;
+  if (item.needsDrinkFridge && !state.upgrades?.drinkFridge) {
+    return { success: false, error: 'Chưa mở khóa Tủ nước giải khát' };
+  }
+
+  const unitCost = getEffectiveCost(itemId, state);
+  const cost = unitCost * batchCount;
+
   if (state.money < cost) {
     return { success: false, error: 'Không đủ tiền' };
   }
@@ -260,7 +361,12 @@ export function calcRent(day = 1) {
  */
 export function applyRentAndLoan(state = getState()) {
   const rent = calcRent(state.day || 1);
-  state.money = (Number(state.money) || 0) - rent;
+  const salary = calcStaffSalary(state);
+
+  state.money =
+    (Number(state.money) || 0) -
+    rent -
+    salary;
 
   let loanGiven = false;
   let gameOver = false;
@@ -280,7 +386,7 @@ export function applyRentAndLoan(state = getState()) {
   }
 
   saveState(state);
-  return { money: state.money, rent, loanGiven, gameOver };
+  return { money: state.money, rent, salary, loanGiven, gameOver };
 }
 
 /**
@@ -309,5 +415,58 @@ export function restoreDayBackup(state = getState()) {
     delete state._rentAppliedForDay;
     saveState(state);
   }
+  return state;
+}
+/**
+ * M29 — nhân viên đang làm việc hôm nay?
+ * Đã thuê + không được cho nghỉ hôm nay.
+ */
+export function isStaffWorking(role, state = getState()) {
+  if (!state.upgrades?.[role]) return false;
+
+  return !Boolean(state.staffRestActive?.[role]);
+}
+
+/**
+ * M29 — tính tổng lương nhân viên hôm nay.
+ * Chỉ tính những nhân viên đang làm việc.
+ */
+export function calcStaffSalary(state = getState()) {
+  let total = 0;
+
+  if (isStaffWorking('staffGrill', state)) {
+    total += 40000;
+  }
+
+  if (isStaffWorking('staffCook', state)) {
+    total += 40000;
+  }
+
+  return total;
+}
+
+/**
+ * M29 — bật/tắt cho nhân viên nghỉ.
+ * Thiết lập này áp dụng từ ngày tiếp theo.
+ */
+export function setStaffRestPending(
+  role,
+  rest,
+  state = getState()
+) {
+  if (role !== 'staffGrill' && role !== 'staffCook') {
+    return state;
+  }
+
+  if (!state.staffRestPending) {
+    state.staffRestPending = {
+      staffGrill: false,
+      staffCook: false,
+    };
+  }
+
+  state.staffRestPending[role] = Boolean(rest);
+
+  saveState(state);
   return state;
 }

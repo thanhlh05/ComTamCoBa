@@ -1,9 +1,16 @@
-import { getState, saveState, recordRating, setLastSummary, backupDayBeforeService } from './state.js';
+import {
+  getState,
+  saveState,
+  recordRating,
+  setLastSummary,
+  backupDayBeforeService,
+  isStaffWorking,
+} from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import { scoreOrder } from './scoring.js';
 import { pushReview, resolveReviewReason, formatOrderShort } from './reviews.js';
-import { getPriceFactor } from './pricing.js';
+import { getPriceFactor, matchCombo } from './pricing.js';
 import {
   initGrill,
   updateGrill,
@@ -11,6 +18,7 @@ import {
   getGrillSlotCount,
   popTrayRib,
   getTray,
+  autoLiftGoodRibs,
 } from './grill.js';
 import {
   rollServeType,
@@ -89,16 +97,58 @@ function spawnCustomer() {
   const unlocked = GAME_DATA.customers.types.filter((t) => t.unlockDay <= (state.day || 1));
   const type = unlocked[Math.floor(Math.random() * unlocked.length)];
   const availableExtras = ['suon', 'bi', 'trung', 'tra'];
-  if (state.upgrades?.unlockMenu) availableExtras.push('cha', 'canh');
 
-  const extraCount = Math.floor(Math.random() * (type.extraMax - type.extraMin + 1)) + type.extraMin;
-  const shuffled = [...availableExtras].sort(() => 0.5 - Math.random());
-  const order = ['com', ...shuffled.slice(0, extraCount)];
+  if (state.upgrades?.unlockMenu) {
+    availableExtras.push('cha', 'canh');
+  }
 
-  // M21 — ~55% khách gọi kèm nước mắm (cay hoặc thường)
-  const sauceChance = GAME_DATA.customers.fishSauceChance ?? 0.55;
-  if (Math.random() < sauceChance) {
-    order.push(Math.random() < 0.5 ? 'mam_cay' : 'mam_thuong');
+  if (state.upgrades?.drinkFridge) {
+    availableExtras.push('xa_xi', 'cam_ep', 'sua_dau');
+  }
+
+  const extraCount =
+    Math.floor(
+      Math.random() * (type.extraMax - type.extraMin + 1)
+    ) + type.extraMin;
+
+  const shuffled = [...availableExtras].sort(
+    () => 0.5 - Math.random()
+  );
+
+  let order = [
+    'com',
+    ...shuffled.slice(0, extraCount),
+  ];
+
+  let isComboOrder = false;
+
+  // M27 — ~20% khách gọi đúng 1 combo
+  // Không kèm mắm để khớp giá combo.
+  if (Math.random() < 0.2 && GAME_DATA.combos) {
+    const list = Object.values(GAME_DATA.combos);
+
+    if (list.length > 0) {
+      const combo =
+        list[Math.floor(Math.random() * list.length)];
+
+      order = [...combo.items];
+      isComboOrder = true;
+    }
+  }
+
+  // M21 — ~55% gọi kèm nước mắm
+  // Bỏ qua nếu đang là đơn combo.
+  if (!isComboOrder) {
+    const sauceChance =
+      GAME_DATA.customers.fishSauceChance ?? 0.55;
+
+    if (Math.random() < sauceChance) {
+      order.push(
+        Math.random() < 0.5
+          ? 'mam_cay'
+          : 'mam_thuong'
+      );
+    }
   }
 
   const serveType = rollServeType();
@@ -148,7 +198,12 @@ function renderCustomers() {
       const colorClass = pct > 50 ? 'high' : pct > 20 ? 'med' : 'low';
       const leadId = c.order.includes('suon') ? 'suon' : 'com';
       const leadIcon = ASSETS[leadId] || '🍚';
-      const orderText = formatOrderShort(c.order);
+
+      const comboHit = matchCombo(c.order);
+      const orderText = comboHit
+        ? `🍱 ${GAME_DATA.combos[comboHit]?.name || 'Combo'}`
+        : formatOrderShort(c.order);
+
       const serveIcon = serveTypeIcon(c.serveType);
       const showSpeech = c.speech && c.speechUntil && now < c.speechUntil && !isSelected;
       const regularTag = c.isRegular
@@ -406,6 +461,10 @@ function deliverPlate() {
   updateServeTypeBar();
   updateHUD();
 
+  if (isClosing && customers.length === 0) {
+    finishDay();
+  }
+
   showServiceToast(
     `+${formatMoney(totalEarned)} (${result.stars}⭐)${customer.isRegular ? ' 💚' : ''} - ${customer.type?.label || 'Khách'}!`
   );
@@ -435,6 +494,10 @@ function reportOutOfStock() {
   renderCustomers();
   updateServeTypeBar();
   updateHUD();
+
+  if (isClosing && customers.length === 0) {
+    finishDay();
+  }
 
   showServiceToast(
     `Đã báo hết — ${customer.type?.label || 'Khách'} bỏ đi (không trừ sao)`
@@ -485,6 +548,11 @@ function updateCustomers(dt) {
     return true;
   });
 
+  if (isClosing && customers.length === 0) {
+    finishDay();
+    return;
+  }
+
   let shouldRenderCustomers = queueChanged;
 
   if (!customers.find((c) => c.id === selectedCustomerId)) {
@@ -507,27 +575,98 @@ function updateCustomers(dt) {
   }
 }
 
-/** Chị Hai phụ bếp: mỗi 10s tự thêm 1 món (cơm/bì/trứng) vào đĩa đang chọn */
-function updateAssistant(dt) {
-  const state = getState();
-  if (!state.upgrades?.assistant) return;
+/** M29 — Nhân viên Nướng: mỗi frame kiểm tra, gắp sườn chín vàng */
+function updateStaffGrill(onToast) {
+  if (!isStaffWorking('staffGrill')) return;
+  autoLiftGoodRibs(onToast);
+}
+
+/** M29 — Nhân viên Làm món
+ * - Mỗi 3s lắp 1 món còn thiếu (có hàng), không đụng sườn
+ * - Nếu đơn thiếu món đã hết hàng → dừng, không lắp dở (tránh lỗ NL + sao xấu)
+ * - Không toast khi thêm đúng; chỉ toast khi lắp nhầm (1%) hoặc lần đầu phát hiện hết món
+ */
+function updateStaffCook(dt) {
+  if (!isStaffWorking('staffCook')) return;
   if (!selectedCustomerId || customers.length === 0) return;
+  if (!plateContainer) return;
 
   assistantTimer += dt;
-  if (assistantTimer < 10) return;
+  if (assistantTimer < 3) return;
   assistantTimer = 0;
 
-  const helpItems = ['com', 'bi', 'trung'].filter((id) => {
-    const stock = Number(state.inventory?.[id]) || 0;
-    const alreadyOnPlate = currentPlate.some((p) => p.id === id);
-    return stock > 0 && !alreadyOnPlate;
-  });
+  const state = getState();
+  const customer = customers.find((c) => c.id === selectedCustomerId);
+  if (!customer) return;
 
-  if (helpItems.length === 0) return;
+  const need = getNeededCounts();
+  if (!need || Object.keys(need).length === 0) return;
 
-  const pick = helpItems[Math.floor(Math.random() * helpItems.length)];
-  addIngredientToPlate(pick);
-  showServiceToast(`Chị Hai phụ: thêm ${GAME_DATA.menu[pick]?.name || pick}! 👩‍🍳`);
+  const priority = [
+    'bi', 'trung', 'com',
+    'mam_cay', 'mam_thuong',
+    'tra', 'xa_xi', 'cam_ep', 'sua_dau',
+    'cha', 'canh',
+  ];
+
+  // Món nhân viên có thể lắp mà đơn vẫn thiếu
+  const stillNeeded = priority.filter((id) => need[id] > 0);
+
+  // Có món thiếu nhưng hết hàng → dừng, không lắp dở
+  const blocked = stillNeeded.filter(
+    (id) => (Number(state.inventory?.[id]) || 0) <= 0
+  );
+
+  if (blocked.length > 0) {
+    // Toast 1 lần / khách (tránh spam)
+    if (!customer._staffBlockedToast) {
+      customer._staffBlockedToast = true;
+      const name =
+        GAME_DATA.menu[blocked[0]]?.name || blocked[0];
+      showServiceToast(
+        `Thiếu ${name} trong kho — nhân viên dừng lắp đơn này`
+      );
+    }
+    return;
+  }
+
+  // Còn hàng cho mọi món thiếu (trong phạm vi nhân viên)
+  const available = stillNeeded.filter(
+    (id) => (Number(state.inventory?.[id]) || 0) > 0
+  );
+  if (available.length === 0) return;
+
+  let pick;
+  let isWrong = false;
+
+  // 1% lắp nhầm
+  if (Math.random() < 0.01) {
+    const wrongPool = priority.filter((id) => {
+      if (need[id] > 0) return false;
+      return (Number(state.inventory?.[id]) || 0) > 0;
+    });
+    if (wrongPool.length > 0) {
+      pick = wrongPool[Math.floor(Math.random() * wrongPool.length)];
+      isWrong = true;
+    }
+  }
+
+  if (!pick) pick = available[0];
+
+  const stock = Number(state.inventory?.[pick]) || 0;
+  if (stock <= 0) return;
+
+  state.inventory[pick] = stock - 1;
+  saveState(state);
+  currentPlate.push({ id: pick });
+  renderPlate();
+  updateIngredientButtons();
+
+  if (isWrong) {
+    showServiceToast(
+      `Nhân viên Làm món lắp nhầm ${GAME_DATA.menu[pick]?.name || pick}! ⚠️`
+    );
+  }
 }
 
 function gameLoop(now) {
@@ -555,10 +694,11 @@ function gameLoop(now) {
 
   updateGrill(dt, showServiceToast);
   updateCustomers(dt);
-  updateAssistant(dt);
+  updateStaffGrill(showServiceToast);
+  updateStaffCook(dt);
 
-  // M23 — hết khách trong hàng đợi thì tổng kết
-  if (remainingTime <= 0 && customers.length === 0) {
+    // M23 — đóng cửa (hết giờ hoặc đóng sớm) + hết hàng đợi → Tổng kết
+  if (isClosing && customers.length === 0) {
     finishDay();
     return;
   }
@@ -577,12 +717,15 @@ export function finishDay() {
 
 /** M23 — Đóng cửa sớm: dừng khách mới, bán hết hàng đợi */
 export function beginEarlyClose() {
-  if (isClosing) return;
+  if (isClosing) {
+    // Đã đang đóng cửa: nếu hết khách thì kết thúc luôn
+    if (customers.length === 0) finishDay();
+    return;
+  }
 
   isClosing = true;
   showServiceToast('Đang đóng cửa — phục vụ hết khách đang đợi');
 
-  // Nếu hàng đợi trống ngay → kết thúc luôn
   if (customers.length === 0) {
     finishDay();
   }
@@ -653,6 +796,11 @@ export function startService() {
   document.getElementById('btn-ing-cha')?.classList.toggle('hidden', !hasUnlock);
   document.getElementById('btn-ing-canh')?.classList.toggle('hidden', !hasUnlock);
 
+  const hasDrinkFridge = Boolean(state.upgrades?.drinkFridge);
+  document.getElementById('btn-ing-xa-xi')?.classList.toggle('hidden', !hasDrinkFridge);
+  document.getElementById('btn-ing-cam-ep')?.classList.toggle('hidden', !hasDrinkFridge);
+  document.getElementById('btn-ing-sua-dau')?.classList.toggle('hidden', !hasDrinkFridge);
+
   updateHUD();
   initGrill(getGrillSlotCount());
 
@@ -679,6 +827,8 @@ export function initServiceScreen() {
     // M17/M18 — đổi khách thì làm lại đĩa và chọn lại Dĩa/Hộp
     resetPlateServeState();
     currentPlate = [];
+
+    assistantTimer = 0; // M29 — đổi khách thì nhân viên chờ chu kỳ mới
 
     renderPlate();
     renderCustomers();

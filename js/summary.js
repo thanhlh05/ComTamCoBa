@@ -5,6 +5,7 @@ import {
   calcRent,
   applyRentAndLoan,
   pushRevenueRecord,
+  calcStaffSalary,
 } from './state.js';
 import { formatMoney, formatStar } from './ui.js';
 import { applyPendingPrices, ensurePriceMaps } from './pricing.js';
@@ -24,11 +25,13 @@ function getSummaryData() {
   };
 
   const rent = calcRent(last.day || state.day || 1);
-  const profit = (last.revenue || 0) + (last.tips || 0) - rent;
+  const salary = calcStaffSalary(state);
+  const profit = (last.revenue || 0) + (last.tips || 0) - rent - salary;
 
   return {
     ...last,
     rent,
+    salary,
     profit,
     currentMoney: state.money,
     currentStar: state.star,
@@ -43,24 +46,26 @@ function renderSummary() {
   const hudDayEl = document.getElementById('summary-hud-day');
   if (hudDayEl) hudDayEl.textContent = `Ngày ${data.day || 1}`;
 
-  // Áp dụng trừ thuê + xử lý vay / game over (chỉ 1 lần khi vào màn)
+    // Áp dụng trừ thuê + xử lý vay / game over (chỉ 1 lần khi vào màn)
     if (!state._rentAppliedForDay || state._rentAppliedForDay !== data.day) {
     const result = applyRentAndLoan(state);
     state._rentAppliedForDay = data.day;
     saveState(state);
 
     data.rent = result.rent;
+    data.salary = result.salary || 0;
     data.currentMoney = result.money;
     data.loanGiven = result.loanGiven;
     data.gameOver = result.gameOver;
-    data.profit = (data.revenue || 0) + (data.tips || 0) - result.rent;
+    data.profit =
+      (data.revenue || 0) + (data.tips || 0) - result.rent - (result.salary || 0);
 
-    // Lưu vào sổ doanh thu (1 lần / ngày)
     pushRevenueRecord({
       day: data.day,
       revenue: data.revenue || 0,
       tips: data.tips || 0,
       rent: result.rent,
+      salary: result.salary || 0,
       profit: data.profit,
       servedCount: data.servedCount || 0,
       leaveCount: data.leaveCount || 0,
@@ -97,7 +102,7 @@ function renderSummary() {
       <div class="summary-row"><span>Doanh thu</span><span>${formatMoney(data.revenue || 0)}</span></div>
       <div class="summary-row"><span>Tiền boa</span><span>${formatMoney(data.tips || 0)}</span></div>
       <div class="summary-row"><span>Thuê mặt bằng</span><span>-${formatMoney(data.rent)}</span></div>
-      <div class="summary-row summary-total">
+      <div class="summary-row"><span>Lương nhân viên</span><span>-${formatMoney(data.salary || 0)}</span></div>      <div class="summary-row summary-total">
         <span>Tổng lời/lỗ</span>
         <span class="${data.profit >= 0 ? 'profit' : 'loss'}">${formatMoney(data.profit)}</span>
       </div>

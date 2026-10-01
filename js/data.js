@@ -14,7 +14,26 @@ export const GAME_DATA = {
     tra: { id: 'tra', name: 'Trà đá', price: 5000, cost: 1000, required: false, group: 'drink' },
       mam_cay: { id: 'mam_cay', name: 'Nước mắm cay', price: 0, cost: 500, required: false, group: 'sauce' },
       mam_thuong: { id: 'mam_thuong', name: 'Nước mắm thường', price: 0, cost: 500, required: false, group: 'sauce' },
-  },
+      xa_xi: { id: 'xa_xi', name: 'Xá xị', price: 8000, cost: 2000, required: false, group: 'drink', needsDrinkFridge: true },
+      cam_ep: { id: 'cam_ep', name: 'Cam ép', price: 10000, cost: 3000, required: false, group: 'drink', needsDrinkFridge: true },
+      sua_dau: { id: 'sua_dau', name: 'Sữa đậu nành', price: 7000, cost: 1500, required: false, group: 'drink', needsDrinkFridge: true },  },
+    // M27 — Combo (mục 35)
+    // Giá combo = 50%–100% tổng giá lẻ active
+    combos: {
+      com_suon_tra: {
+        id: 'com_suon_tra',
+        name: 'Combo Cơm Sườn Trà',
+        items: ['com', 'suon', 'tra'],
+        // Giá mặc định = 90% tổng giá gốc
+        defaultRatio: 0.9,
+      },
+      com_suon_bi: {
+        id: 'com_suon_bi',
+        name: 'Combo Cơm Sườn Bì',
+        items: ['com', 'suon', 'bi'],
+        defaultRatio: 0.9,
+      },
+    },
   customers: {
     // Tỉ lệ khách gọi nước mắm (~55%)
     fishSauceChance: 0.55,
@@ -64,34 +83,47 @@ export const GAME_DATA = {
     tra: 'trà',
     mam_cay: 'mắm cay',
     mam_thuong: 'mắm thường',
+    xa_xi: 'xá xị',
+    cam_ep: 'cam ép',
+    sua_dau: 'sữa đậu',
   },
 
   // M17 — câu thoại (gốc GAME_DATA)
-  customerLines: {
+    customerLines: {
     hoc_sinh: [
       'Quán ơi cho con cơm sườn bì, thêm miếng trứng nha!',
       'Cho con cơm sườn với trà đá nha!',
       'Con đói quá, làm nhanh giúp con với!',
+      'Cơm sườn thôi cũng được, đừng cay nha cô!',
+      'Cho con phần nhỏ thôi, con ăn không hết đâu!',
     ],
     van_phong: [
       'Cho em cơm sườn chả, thêm trà đá.',
       'Cho em một phần bình thường, mang đi giúp em.',
       'Cho em cơm sườn bì, không ớt nha.',
+      'Em cần nhanh chút, sắp vào họp rồi ạ.',
+      'Thêm canh nếu có, cảm ơn quán!',
     ],
     bac_tai: [
       'Cho tôi phần sườn nhiều cơm nha, làm lẹ giúp tôi!',
       'Cho tôi cơm sườn với trứng, ăn nhanh xong chạy tiếp.',
       'Thêm trà đá cho tỉnh táo nha!',
+      'Đóng hộp mang đi giúp, tôi đậu xe ngoài đường.',
+      'Sườn chín vàng thôi, đừng cháy nha!',
     ],
     du_lich: [
       'Cho em một phần cơm sườn với trà đá ạ!',
       'Cho em thử một phần cơm tấm đặc biệt ạ!',
       'Nghe nói ở đây ngon, cho em thử phần đầy đủ!',
+      'Có thể thêm nước mắm cay được không ạ?',
+      'Chụp ảnh món được không? Trông ngon quá!',
     ],
     shipper: [
       'Đơn giao gấp giùm em, cơm sườn 2 phần!',
       'Làm nhanh giúp anh, khách đang chờ!',
       'Cơm sườn bì, đóng hộp mang đi nha!',
+      'Thêm trà đá, cảm ơn quán!',
+      'Đúng giờ giúp em với, app đang đếm phút!',
     ],
   },
   star: {
@@ -105,7 +137,9 @@ export const GAME_DATA = {
     fanMotor: { id: 'fanMotor', name: 'Quạt máy', cost: 300000, effect: 'Kiên nhẫn khách +15%', limit: 1 },
     fridge: { id: 'fridge', name: 'Tủ lạnh', cost: 350000, effect: 'Sườn/chả không hao qua đêm', limit: 1 },
     unlockMenu: { id: 'unlockMenu', name: 'Mở món Chả + Canh', cost: 150000, effect: 'Thêm 2 món vào menu', limit: 1 },
-    assistant: { id: 'assistant', name: 'Thuê chị Hai phụ bếp', cost: 500000, effect: 'Tự lắp giúp 1 món mỗi 10s', limit: 1 },
+    staffGrill: { id: 'staffGrill', name: 'Nhân viên Nướng', cost: 350000, effect: 'Tự gắp sườn chín vào khay', limit: 1 },
+    staffCook: { id: 'staffCook', name: 'Nhân viên Làm món', cost: 350000, effect: 'Tự lắp 1 món thiếu mỗi 3s', limit: 1 },
+    drinkFridge: { id: 'drinkFridge', name: 'Tủ nước giải khát', cost: 280000, effect: 'Mở khóa Xá xị, Cam ép, Sữa đậu nành', limit: 1 },
   },
   events: {
     chance: 0.3,
@@ -115,6 +149,27 @@ export const GAME_DATA = {
       { id: 'power', name: 'Cúp điện', effect: { patienceMultiplier: 0.85 } },
       { id: 'praise', name: 'Có người khen trên mạng', effect: { customerMultiplier: 1.25 } },
       { id: 'swnPrice', name: 'Tăng giá sườn', effect: { porkCostMultiplier: 1.3 } },
+    ],
+  },
+    // M26 — biến động giá vốn trong ngày (mục 34)
+  costEvents: {
+    fromDay: 3,
+    chance: 0.2, // 20% mỗi ngày từ ngày 3
+    list: [
+      {
+        id: 'suon_up',
+        name: 'Sườn tăng giá',
+        itemId: 'suon',
+        costMult: 1.3,
+        message: '📈 Sườn tăng giá hôm nay! Vốn sườn +30%.',
+      },
+      {
+        id: 'trung_down',
+        name: 'Trứng được mùa',
+        itemId: 'trung',
+        costMult: 0.6, // -40%
+        message: '🥚 Trứng được mùa! Vốn trứng -40% hôm nay.',
+      },
     ],
   },
   grill: {
@@ -149,8 +204,12 @@ export const GAME_DATA = {
       trung: '🍳',
       canh: '🍲',
       tra: '🧊',
-        mam_cay: '🌶️',
-        mam_thuong: '🐟',
+      mam_cay: '🌶️',
+      mam_thuong: '🐟',
+      xa_xi: '🥤',
+      cam_ep: '🍊',
+      sua_dau: '🥛',
+      drinkFridge: '🧊',
       student: '👧',
       office: '💼',
       driver: '🛵',
@@ -162,7 +221,9 @@ export const GAME_DATA = {
       fanMotor: '🌀',
       fridge: '❄️',
       unlockMenu: '🍳',
-      assistant: '👩‍🍳',
+      staffGrill: '🔥👩‍🍳',
+      staffCook: '👩‍🍳',
+      combo: '🍱',
     },
   },
     // --- M13: Đánh giá (mục 21) ---
@@ -170,6 +231,9 @@ export const GAME_DATA = {
     'Nguyễn Minh', 'Trần Quốc Anh', 'Lê Hoàng Nam', 'Phạm Gia Hân', 'Mai Thảo',
     'Đỗ Thanh Tùng', 'Vũ Ngọc Lan', 'Bùi Anh Khoa', 'Hoàng Bảo Trân', 'Phan Đức Huy',
     'Trương Mỹ Linh', 'Đặng Quang Vinh', 'Ngô Thu Hà', 'Lý Gia Bảo', 'Đinh Nhật Nam',
+    'Huỳnh Anh Thư', 'Cao Minh Quân', 'Lâm Phương Nghi', 'Tạ Đức Long', 'Kiều Thanh Hà',
+    'Võ Nhật Minh', 'Dương Khánh Vy', 'Phùng Hải Đăng', 'Chu Bảo Ngọc', 'Hồ Quang Huy',
+    'Lưu Thị Mai', 'Trịnh Công Sơn', 'Đoàn Thùy Dung', 'Mai Văn Khoa', 'Bành Quốc Bảo',
   ],
   reviewComments: {
     left: [

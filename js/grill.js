@@ -212,3 +212,29 @@ export function resetGrill() {
 export function getGrillSlots() {
   return grillSlots;
 }
+/**
+ * M29 — Nhân viên Nướng: gắp mọi ô đang chín vàng (good).
+ * 2% mỗi miếng → phế (không vào khay).
+ * @returns {number} số miếng đưa vào khay thành công
+ */
+export function autoLiftGoodRibs(onToast) {
+  let lifted = 0;
+  grillSlots.forEach((slot, index) => {
+    if (!slot || slot.stage !== 'good') return;
+
+    // 2% hỏng
+    if (Math.random() < 0.02) {
+      grillSlots[index] = null;
+      renderGrillSlot(index);
+      onToast?.('Nhân viên Nướng làm hỏng 1 miếng sườn! 💨');
+      return;
+    }
+
+    tray.push({ quality: 'good', progress: Math.round(slot.progress) });
+    grillSlots[index] = null;
+    renderGrillSlot(index);
+    lifted++;
+  });
+  if (lifted > 0) renderTrayDOM();
+  return lifted;
+}

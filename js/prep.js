@@ -1,4 +1,13 @@
-import { getState, buyIngredient, buyUpgrade, discardIngredient, saveState } from './state.js';
+import {
+  getState,
+  buyIngredient,
+  buyUpgrade,
+  discardIngredient,
+  saveState,
+  rollTodayCostEvent,
+  getEffectiveCost,
+  setStaffRestPending,
+} from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
 import {
@@ -8,6 +17,9 @@ import {
   getPriceLabel,
   priceBounds,
   ensurePriceMaps,
+  getPendingComboPrice,
+  comboPriceBounds,
+  setPendingComboPrice,
 } from './pricing.js';
 
 let activeTab = 'ingredients';
@@ -36,6 +48,7 @@ function sanitizeMenuPrice(rawValue) {
 export function renderPrepScreen() {
   const state = getState();
   ensurePriceMaps(state);
+  rollTodayCostEvent(state);
 
   // 1. Cập nhật HUD: Ngày, Tiền, Sao
   const dayEl = document.getElementById('prep-hud-day');
@@ -46,15 +59,17 @@ export function renderPrepScreen() {
   if (moneyEl) moneyEl.textContent = formatMoney(state.money);
   if (starEl) starEl.textContent = formatStar(state.star || 4.0);
 
-  // 2. Cập nhật trạng thái Tab bar
+    // 2. Cập nhật trạng thái Tab bar
   const tabIngredientsBtn = document.getElementById('prep-tab-ingredients');
   const tabUpgradesBtn = document.getElementById('prep-tab-upgrades');
   const tabPricingBtn = document.getElementById('prep-tab-pricing');
+  const tabDrinksBtn = document.getElementById('prep-tab-drinks');
 
-  if (tabIngredientsBtn && tabUpgradesBtn && tabPricingBtn) {
+  if (tabIngredientsBtn && tabUpgradesBtn && tabPricingBtn && tabDrinksBtn) {
     const isIng = activeTab === 'ingredients';
     const isUpgrade = activeTab === 'upgrades';
     const isPricing = activeTab === 'pricing';
+    const isDrinks = activeTab === 'drinks';
 
     tabIngredientsBtn.classList.toggle('active', isIng);
     tabIngredientsBtn.setAttribute('aria-selected', String(isIng));
@@ -62,6 +77,8 @@ export function renderPrepScreen() {
     tabUpgradesBtn.setAttribute('aria-selected', String(isUpgrade));
     tabPricingBtn.classList.toggle('active', isPricing);
     tabPricingBtn.setAttribute('aria-selected', String(isPricing));
+    tabDrinksBtn.classList.toggle('active', isDrinks);
+    tabDrinksBtn.setAttribute('aria-selected', String(isDrinks));
   }
 
   // 3. Render danh sách theo tab
@@ -72,6 +89,8 @@ export function renderPrepScreen() {
     contentEl.innerHTML = renderIngredientsList(state);
   } else if (activeTab === 'pricing') {
     contentEl.innerHTML = renderPricingList(state);
+  } else if (activeTab === 'drinks') {
+    contentEl.innerHTML = renderDrinksList(state);
   } else {
     contentEl.innerHTML = renderUpgradesList(state);
   }
@@ -126,9 +145,14 @@ function renderPriceRow(itemId, state) {
  * Tạo HTML danh sách nguyên liệu — M15 mua 1/5/10/tùy chỉnh.
  */
 function renderIngredientsList(state) {
-  const items = Object.values(GAME_DATA.menu);
+  const items = Object.values(GAME_DATA.menu).filter((item) => item.group !== 'drink');
+  const ev = state.todayCostEvent;
 
-  return items
+  const banner = ev?.message
+    ? `<div class="cost-event-banner">${ev.message}</div>`
+    : '';
+
+  return banner + items
     .map((item) => {
       const icon = ASSETS[item.id] || '🍚';
       const stock = Number(state.inventory?.[item.id]) || 0;
@@ -141,9 +165,11 @@ function renderIngredientsList(state) {
         ? spoilageHint(item.id, stock, state)
         : '';
 
+      const unitCost = getEffectiveCost(item.id, state);
+
       const metaHtml = isLocked
         ? '<span class="lock-tag">🔒 Cần mở khóa nâng cấp</span>'
-        : `Vốn: <strong>${formatMoney(item.cost)}</strong>/phần`;
+        : `Vốn: <strong>${formatMoney(unitCost)}</strong>/phần`;
 
       // Panel mua mở rộng khi chọn món này
       const isBuying =
@@ -159,7 +185,7 @@ function renderIngredientsList(state) {
             disabled
           >Chưa mở</button>`;
       } else if (isBuying) {
-        const total = item.cost * buyQty;
+        const total = getEffectiveCost(item.id, state) * buyQty;
         const canAfford =
           state.money >= total && buyQty > 0;
 
@@ -264,17 +290,102 @@ function renderIngredientsList(state) {
                 ${spoilHtml}
             </div>
           </div>
-
           <div class="card-action">
             ${actionHtml}
           </div>
+        </div>`;
+    })
+      .join('');
+}
+
+function renderDrinksList(state) {
+  const hasFridge = Boolean(state.upgrades?.drinkFridge);
+  const items = Object.values(GAME_DATA.menu).filter((item) => item.group === 'drink');
+
+  return items
+    .map((item) => {
+      const icon = ASSETS[item.id] || '🥤';
+      const stock = Number(state.inventory?.[item.id]) || 0;
+      const isLocked = Boolean(item.needsDrinkFridge) && !hasFridge;
+
+      const unitCost = getEffectiveCost(item.id, state);
+
+      const metaHtml = isLocked
+        ? '<span class="lock-tag">🔒 Cần Tủ nước giải khát</span>'
+        : `Vốn: <strong>${formatMoney(unitCost)}</strong>/phần`;
+
+      const isBuying = !isLocked && buyTargetId === item.id;
+      let actionHtml = '';
+
+      if (isLocked) {
+        actionHtml = `<button type="button" class="buy-btn disabled" disabled>Chưa mở</button>`;
+      } else if (isBuying) {
+        const total = getEffectiveCost(item.id, state) * buyQty;
+        const canAfford = state.money >= total && buyQty > 0;
+        const afterStock = stock + buyQty;
+
+        actionHtml = `
+          <div class="buy-panel">
+            <div class="buy-qty-row">
+              <button type="button" class="buy-qty-chip ${buyQty === 1 ? 'active' : ''}" data-action="set-buy-qty" data-qty="1">1</button>
+              <button type="button" class="buy-qty-chip ${buyQty === 5 ? 'active' : ''}" data-action="set-buy-qty" data-qty="5">5</button>
+              <button type="button" class="buy-qty-chip ${buyQty === 10 ? 'active' : ''}" data-action="set-buy-qty" data-qty="10">10</button>
+              <button type="button" class="buy-qty-chip ${![1, 5, 10].includes(buyQty) ? 'active' : ''}" data-action="set-buy-custom" data-id="${item.id}">Tùy chỉnh</button>
+            </div>
+
+            <div class="buy-preview">
+              <span>SL: <strong>${buyQty}</strong></span>
+              <span>Thành tiền: <strong>${formatMoney(total)}</strong></span>
+              <span>Kho sau: <strong>${afterStock}</strong></span>
+            </div>
+
+            <div class="buy-panel-actions">
+              <button type="button" class="buy-cancel-btn" data-action="cancel-buy">Huỷ</button>
+              <button type="button" class="buy-btn ${!canAfford ? 'disabled' : ''}" data-action="confirm-buy" data-id="${item.id}" ${canAfford ? '' : 'disabled'}>
+                Mua <small>${formatMoney(total)}</small>
+              </button>
+            </div>
+          </div>`;
+      } else {
+        const discardBtn =
+          stock > 0
+            ? `<button type="button" class="discard-btn" data-action="discard-ingredient" data-id="${item.id}" data-stock="${stock}">Đổ bỏ</button>`
+            : '';
+
+        actionHtml = `
+          <div class="card-action-col">
+            <button type="button" class="buy-btn" data-action="open-buy" data-id="${item.id}">Mua</button>
+            ${discardBtn}
+          </div>`;
+      }
+
+      return `
+        <div class="prep-card ${isLocked ? 'locked' : ''} ${isBuying ? 'buying' : ''}">
+          <div class="card-info">
+            <div class="card-icon" aria-hidden="true">${icon}</div>
+
+            <div class="card-details">
+              <div class="card-name">${item.name}</div>
+              <div class="card-meta">${metaHtml}</div>
+              <div class="card-stock">Tồn kho: <strong>${stock}</strong> phần</div>
+            </div>
+          </div>
+
+          <div class="card-action">${actionHtml}</div>
         </div>`;
     })
     .join('');
 }
 
 function renderPricingList(state) {
-  const menuItems = Object.values(GAME_DATA.menu || {}).filter((item) => item && item.id);
+  const menuItems = Object.values(GAME_DATA.menu || {}).filter((item) => {
+    if (!item?.id) return false;
+    // Chưa tủ nước → ẩn xá xị / cam / sữa đậu
+    if (item.needsDrinkFridge && !state.upgrades?.drinkFridge) return false;
+    // Chưa mở Chả+Canh → ẩn chả / canh (cùng luật)
+    if ((item.id === 'cha' || item.id === 'canh') && !state.upgrades?.unlockMenu) return false;
+    return true;
+  });
 
   return `
     <div class="pricing-table">
@@ -287,16 +398,31 @@ function renderPricingList(state) {
         const active = getActivePrice(item.id, state);
         const pending = getPendingPrice(item.id, state);
         const value = Number.isFinite(pending) ? pending : active;
-        const note = pending !== active ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>' : '';
-        const label = Number(value) === 0 ? '<span class="price-label price-free">FREE</span>' : (() => {
-          const info = getPriceLabel(item.id, value);
-          return info ? `<span class="price-label price-${info.kind}">${info.text}</span>` : '';
-        })();
+
+        const note =
+          pending !== active
+            ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>'
+            : '';
+
+        const label =
+          Number(value) === 0
+            ? '<span class="price-label price-free">FREE</span>'
+            : (() => {
+                const info = getPriceLabel(item.id, value);
+
+                return info
+                  ? `<span class="price-label price-${info.kind}">${info.text}</span>`
+                  : '';
+              })();
 
         return `
           <div class="pricing-row">
             <span class="pricing-name">${item.name}</span>
-            <span class="pricing-active">${formatMoney(active)}</span>
+
+            <span class="pricing-active">
+              ${formatMoney(active)}
+            </span>
+
             <div class="pricing-input-wrap">
               <input
                 class="pricing-input"
@@ -307,11 +433,82 @@ function renderPricingList(state) {
                 step="1000"
                 data-action="price-input"
                 data-id="${item.id}"
-                value="${Math.max(PRICE_INPUT_MIN, Math.min(PRICE_INPUT_MAX, Number(value) || 0))}"
+                value="${Math.max(
+                  PRICE_INPUT_MIN,
+                  Math.min(
+                    PRICE_INPUT_MAX,
+                    Number(value) || 0
+                  )
+                )}"
                 aria-label="Giá mới cho ${item.name}"
               />
             </div>
-            <div class="pricing-meta">${label}</div>
+
+            <div class="pricing-meta">
+              ${label}
+            </div>
+
+            ${note}
+          </div>
+        `;
+      }).join('')}
+
+      ${Object.values(GAME_DATA.combos || {}).map((combo) => {
+        const { min, max, sum } =
+          comboPriceBounds(combo.id, state);
+
+        const pending =
+          getPendingComboPrice(combo.id, state);
+
+        const active =
+          state.comboPrices?.[combo.id];
+
+        const activeShow =
+          Number.isFinite(active)
+            ? active
+            : pending;
+
+        const note =
+          Number.isFinite(active) &&
+          active !== pending
+            ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>'
+            : '';
+
+        return `
+          <div class="pricing-row pricing-combo">
+            <span class="pricing-name">
+              🍱 ${combo.name}
+            </span>
+
+            <span class="pricing-active">
+              ${formatMoney(activeShow)}
+            </span>
+
+            <div class="pricing-input-wrap">
+              <input
+                class="pricing-input"
+                type="number"
+                inputmode="numeric"
+                min="${min}"
+                max="${max}"
+                step="1000"
+                data-action="combo-price-input"
+                data-id="${combo.id}"
+                value="${pending}"
+                aria-label="Giá combo ${combo.name}"
+              />
+            </div>
+
+            <div class="pricing-meta">
+              <span class="price-label price-mid">
+                Khung ${formatMoney(min)}–${formatMoney(max)}
+              </span>
+            </div>
+
+            <div class="pricing-delay">
+              Tổng lẻ: ${formatMoney(sum)} · chỉ 50%–100%
+            </div>
+
             ${note}
           </div>
         `;
@@ -339,6 +536,37 @@ function renderUpgradesList(state) {
       const canAfford = !isMax && state.money >= cost;
 
       let statusHtml = '';
+      // M29 — công tắc Cho nghỉ (chỉ nhân viên đã thuê)
+      let restHtml = '';
+
+      if (
+        (upgrade.id === 'staffGrill' || upgrade.id === 'staffCook') &&
+        isMax
+      ) {
+        const pending = Boolean(
+          state.staffRestPending?.[upgrade.id]
+        );
+
+        const active = Boolean(
+          state.staffRestActive?.[upgrade.id]
+        );
+
+        restHtml = `
+          <label class="staff-rest-toggle">
+            <input
+              type="checkbox"
+              data-action="toggle-staff-rest"
+              data-id="${upgrade.id}"
+              ${pending ? 'checked' : ''}
+            />
+            <span>Cho nghỉ hôm nay${active ? ' (đang nghỉ)' : ''}</span>
+          </label>
+
+          <div class="staff-rest-hint">
+            Áp dụng từ ngày bán tiếp theo
+          </div>
+        `;
+      }
       if (upgrade.limit === 1) {
         statusHtml = isMax
           ? '<span class="status-tag success">Đã sở hữu</span>'
@@ -361,6 +589,7 @@ function renderUpgradesList(state) {
               <div class="card-name">${upgrade.name}</div>
               <div class="card-meta">${upgrade.effect}</div>
               <div class="card-status">${statusHtml}</div>
+              ${restHtml}
             </div>
           </div>
           <div class="card-action">
@@ -451,7 +680,11 @@ function handlePricingInput(event) {
   const itemId = input.dataset.id;
   if (!itemId) return;
 
-  const nextValue = sanitizeMenuPrice(input.value);
+  // Đang gõ dở (rỗng) — không đụng gì, giữ focus
+  const raw = String(input.value ?? '').trim();
+  if (raw === '') return;
+
+  const nextValue = sanitizeMenuPrice(raw);
   if (nextValue === null) return;
 
   const state = getState();
@@ -459,8 +692,39 @@ function handlePricingInput(event) {
   state.pendingMenuPrices[itemId] = nextValue;
   saveState(state);
 
-  input.value = String(Math.max(PRICE_INPUT_MIN, Math.min(PRICE_INPUT_MAX, nextValue)));
-  renderPrepScreen();
+  // CHỈ cập nhật nhãn — KHÔNG gán input.value, KHÔNG renderPrepScreen()
+  updatePricingRowMeta(input, itemId, nextValue, state);
+}
+
+function updatePricingRowMeta(input, itemId, value, state) {
+  const row = input.closest('.pricing-row');
+  if (!row) return;
+
+  const meta = row.querySelector('.pricing-meta');
+  if (meta) {
+    if (Number(value) === 0) {
+      meta.innerHTML = '<span class="price-label price-free">FREE</span>';
+    } else {
+      const info = getPriceLabel(itemId, value);
+      meta.innerHTML = info
+        ? `<span class="price-label price-${info.kind}">${info.text}</span>`
+        : '';
+    }
+  }
+
+  // Ghi chú "Áp dụng từ ngày bán tiếp theo"
+  const active = getActivePrice(itemId, state);
+  let note = row.querySelector('.pricing-delay');
+  if (value !== active) {
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'pricing-delay';
+      note.textContent = 'Áp dụng từ ngày bán tiếp theo';
+      row.appendChild(note);
+    }
+  } else if (note) {
+    note.remove();
+  }
 }
 
 function ensureDiscardDialog() {
@@ -543,9 +807,11 @@ function openCustomBuyDialog(itemId) {
 
   const state = getState();
 
-  const maxByMoney = Math.floor(
-    (Number(state.money) || 0) / item.cost
-  );
+  const unitCost = getEffectiveCost(item.id, state);
+
+  const maxByMoney = unitCost > 0
+    ? Math.floor((Number(state.money) || 0) / unitCost)
+    : 0;
 
   const suggested = Math.max(
     1,
@@ -730,10 +996,10 @@ function updateCustomBuyHint() {
 
   if (!hint || !item) return;
 
-  const total =
-    item.cost * Math.max(0, n);
-
   const state = getState();
+
+  const total =
+    getEffectiveCost(item.id, state) * Math.max(0, n);
 
   const ok =
     n >= 1 &&
@@ -760,10 +1026,11 @@ export function initPrepScreen(options = {}) {
     cachedOnOpenService = options.onOpenService;
   }
 
-  // Chuyển tab
+    // Chuyển tab
   const tabIngredientsBtn = document.getElementById('prep-tab-ingredients');
   const tabUpgradesBtn = document.getElementById('prep-tab-upgrades');
   const tabPricingBtn = document.getElementById('prep-tab-pricing');
+  const tabDrinksBtn = document.getElementById('prep-tab-drinks');
 
   tabIngredientsBtn?.addEventListener('click', () => {
   activeTab = 'ingredients';
@@ -778,14 +1045,119 @@ export function initPrepScreen(options = {}) {
   });
 
   tabPricingBtn?.addEventListener('click', () => {
-    handleTabClick('pricing');
+    activeTab = 'pricing';
+    buyTargetId = null;
+    renderPrepScreen();
+  });
+
+  tabDrinksBtn?.addEventListener('click', () => {
+    activeTab = 'drinks';
+    buyTargetId = null;
+    renderPrepScreen();
   });
 
   // Uỷ quyền sự kiện mua hàng trong danh sách
   const contentEl = document.getElementById('prep-content');
   contentEl?.addEventListener('click', handleContentClick);
+
+  contentEl?.addEventListener('change', (event) => {
+    const input = event.target.closest(
+      'input[data-action="toggle-staff-rest"]'
+    );
+
+    if (!input) return;
+
+    const id = input.dataset.id;
+
+    if (!id) return;
+
+    setStaffRestPending(id, input.checked);
+    renderPrepScreen();
+  });
+
   contentEl?.addEventListener('input', handlePricingInput);
 
+  contentEl?.addEventListener('input', (event) => {
+    const input = event.target.closest(
+      'input[data-action="combo-price-input"]'
+    );
+
+    if (!input) return;
+
+    const id = input.dataset.id;
+
+    if (!id) return;
+
+    const raw = String(
+      input.value ?? ''
+    ).trim();
+
+    if (raw === '') return;
+
+    setPendingComboPrice(
+      id,
+      raw
+    );
+  });
+
+  contentEl?.addEventListener('change', (event) => {
+    const input = event.target.closest('input[data-action="price-input"]');
+    if (!input) return;
+    const itemId = input.dataset.id;
+    if (!itemId) return;
+
+    const nextValue = sanitizeMenuPrice(input.value);
+    if (nextValue === null) {
+      // Giá không hợp lệ → trả về pending hiện tại
+      const state = getState();
+      input.value = String(getPendingPrice(itemId, state));
+      return;
+    }
+    input.value = String(nextValue);
+    const state = getState();
+    if (!state.pendingMenuPrices) state.pendingMenuPrices = {};
+    state.pendingMenuPrices[itemId] = nextValue;
+    saveState(state);
+    updatePricingRowMeta(input, itemId, nextValue, state);
+  });
+
+  contentEl?.addEventListener('change', (event) => {
+    const input = event.target.closest(
+      'input[data-action="combo-price-input"]'
+    );
+
+    if (!input) return;
+
+    const id = input.dataset.id;
+
+    if (!id) return;
+
+    const state = getState();
+
+    const { min, max } =
+      comboPriceBounds(id, state);
+
+    let n = Math.round(
+      Number(input.value)
+    );
+
+    if (!Number.isFinite(n)) {
+      n = min;
+    }
+
+    n = Math.max(
+      min,
+      Math.min(max, n)
+    );
+
+    input.value = String(n);
+
+    setPendingComboPrice(
+      id,
+      n,
+      state
+    );
+  });
   // Nút Mở bán
   const openServiceBtn = document.getElementById('btn-open-service');
   openServiceBtn?.addEventListener('click', () => {

@@ -1905,3 +1905,36 @@ h2 { margin: 18px 4px 12px; font-size: 1.8rem; }
   border-radius: 999px;
   padding: 2px 6px;
 }
+.cost-event-banner {
+  background: #fff3cd;
+  color: #5a3a22;
+  border: 1px solid #f0d78c;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* M29 — Cho nghỉ nhân viên */
+.staff-rest-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.staff-rest-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.staff-rest-hint {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  margin-top: 2px;
+}

@@ -1,5 +1,10 @@
 import { GAME_DATA } from './data.js';
-import { getActivePrice, orderHasExpensiveItem } from './pricing.js';
+import {
+  getActivePrice,
+  orderHasExpensiveItem,
+  matchCombo,
+  getActiveComboPrice,
+} from './pricing.js';
 import { getState } from './state.js';
 
 /**
@@ -50,15 +55,39 @@ export function scoreOrder(customer, plate, options = {}) {
     stars = Math.max(1, stars - 1);
   }
 
-  const orderPrice = customer.order.reduce(
+  let orderPrice = customer.order.reduce(
     (sum, id) => sum + getActivePrice(id, state),
     0
   );
 
-  const baseEarned = stars >= 3 ? orderPrice : Math.round(orderPrice * 0.5);
-  const tipRate = stars >= 4 ? customer.type.tip || 0 : 0;
-  const tipEarned = Math.round(orderPrice * tipRate);
-  const totalEarned = baseEarned + tipEarned;
+  // M27 — nếu đơn khớp chính xác combo thì dùng giá combo
+  const comboId =
+    errors === 0
+      ? matchCombo(customer.order)
+      : null;
+
+  if (comboId) {
+    orderPrice = getActiveComboPrice(
+      comboId,
+      state
+    );
+  }
+
+  const baseEarned =
+    stars >= 3
+      ? orderPrice
+      : Math.round(orderPrice * 0.5);
+
+  const tipRate =
+    stars >= 4
+      ? customer.type.tip || 0
+      : 0;
+
+  const tipEarned =
+    Math.round(orderPrice * tipRate);
+
+  const totalEarned =
+    baseEarned + tipEarned;
 
   return {
     stars,

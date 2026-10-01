@@ -362,7 +362,7 @@ Thay nút "Mua lố 10" cố định bằng chọn số lượng:
 | Mã | Tên | Giá bán | Giá vốn/phần | Mở khóa |
 |---|---|---|---|---|
 | tra | Trà đá | +5.000 | 1.000 | Có sẵn từ ngày 1 |
-| xaxi | Xá xị Cô Ba | +10.000 | 4.000 | Nâng cấp "Tủ nước giải khát" (mục 8) |
+| xaxi | Xá xị | +10.000 | 4.000 | Nâng cấp "Tủ nước giải khát" (mục 8) |
 | camep | Cam ép | +12.000 | 5.000 | Nâng cấp "Tủ nước giải khát" |
 | suadau | Sữa đậu nành | +8.000 | 3.000 | Nâng cấp "Tủ nước giải khát" |
 
