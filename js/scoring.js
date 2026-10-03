@@ -8,6 +8,35 @@ import {
 import { getState } from './state.js';
 
 /**
+ * M36 — Số món khớp với order (min của từng id).
+ * ≥1 → chấm sao bình thường
+ * =0 → nhánh giao trống
+ */
+function countMatchedItems(customer, plate) {
+  const req = {};
+  const del = {};
+
+  customer.order.forEach((id) => {
+    req[id] = (req[id] || 0) + 1;
+  });
+
+  plate.forEach((item) => {
+    del[item.id] = (del[item.id] || 0) + 1;
+  });
+
+  let matched = 0;
+
+  Object.keys(req).forEach((id) => {
+    matched += Math.min(
+      req[id] || 0,
+      del[id] || 0
+    );
+  });
+
+  return matched;
+}
+
+/**
  * Chấm điểm đơn theo mục 7 + phạt giá mục 24.
  */
 export function scoreOrder(customer, plate, options = {}) {
@@ -30,13 +59,42 @@ export function scoreOrder(customer, plate, options = {}) {
     if (diff < 0) for (let i = 0; i < -diff; i++) missing.push(k);
     else if (diff > 0) for (let i = 0; i < diff; i++) extra.push(k);
   });
-  const errors = missing.length + extra.length + serveErrors;
+  // M31 — Tóp mỡ không bao giờ tính thừa món
+  const extraFiltered = extra.filter((id) => id !== 'top_mo');
+  const errorsAdjusted =
+    missing.length + extraFiltered.length + serveErrors;
 
-  const pct = (customer.patience / customer.maxPatience) * 100;
-  const ribDelivered = plate.find((i) => i.id === 'suon');
-  const ribOrdered = customer.order.includes('suon');
-  const isSlightBurn =
-    ribOrdered && ribDelivered && ribDelivered.quality === 'slightBurn';
+  // Giữ errors gốc để review missing/extra, nhưng dùng errorsAdjusted để tính sao
+  const errors = errorsAdjusted;
+
+const pct = (customer.patience / customer.maxPatience) * 100;
+const ribDelivered = plate.find((i) => i.id === 'suon');
+const ribOrdered = customer.order.includes('suon');
+const isSlightBurn =
+  ribOrdered &&
+  ribDelivered &&
+  ribDelivered.quality === 'slightBurn';
+
+// M36 — Giao 0 món khớp với order → nhánh giao trống
+const matchedCount = countMatchedItems(customer, plate);
+const isEmptyDelivery = matchedCount === 0;
+
+if (isEmptyDelivery) {
+  return {
+    stars: 1,
+    orderPrice: 0,
+    baseEarned: 0,
+    tipEarned: 0,
+    totalEarned: 0,
+    errors: Math.max(errors, 1),
+    missing,
+    extra,
+    isSlightBurn: false,
+    patiencePct: pct,
+    priceTooHigh: false,
+    isEmptyDelivery: true,
+  };
+}
 
   let stars = 1;
   if (errors === 0) {
@@ -53,6 +111,12 @@ export function scoreOrder(customer, plate, options = {}) {
   const priceTooHigh = orderHasExpensiveItem(customer.order, state);
   if (priceTooHigh) {
     stars = Math.max(1, stars - 1);
+  }
+
+  // M31 — Tóp mỡ: nếu có và đơn đạt từ 3 sao thì +1 sao
+  const hasTopMo = plate.some((p) => p.id === 'top_mo');
+  if (hasTopMo && stars >= 3) {
+    stars = Math.min(5, stars + 1);
   }
 
   let orderPrice = customer.order.reduce(
@@ -73,15 +137,25 @@ export function scoreOrder(customer, plate, options = {}) {
     );
   }
 
+    // M31 — Tóp mỡ cộng thêm vào giá đơn (không nằm trong order khách)
+  if (hasTopMo) {
+    orderPrice += Number(GAME_DATA.menu.top_mo?.price) || 7000;
+  }
+
   const baseEarned =
     stars >= 3
       ? orderPrice
       : Math.round(orderPrice * 0.5);
 
-  const tipRate =
+    // M31 — Tóp mỡ được cộng thêm 10% boa nếu đạt từ 3 sao
+  let tipRate =
     stars >= 4
       ? customer.type.tip || 0
       : 0;
+
+  if (hasTopMo && stars >= 3) {
+    tipRate += 0.1; // +10 điểm % boa
+  }
 
   const tipEarned =
     Math.round(orderPrice * tipRate);

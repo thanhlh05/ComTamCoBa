@@ -68,6 +68,21 @@ PROGRESS.md      nhật ký tiến độ
 - **Nhân viên** (mục 38): 2 nhân viên (Nướng, Làm món) là 2 nâng cấp và 2 trạng thái hoàn toàn tách biệt trong state — không dùng chung 1 biến "đã thuê phụ bếp" như thiết kế "chị Hai" cũ. Cơ chế lỗi ngẫu nhiên của từng người (2% mỗi miếng với Nhân viên Nướng, 1% mỗi thao tác với Nhân viên Làm món) chỉ chạy khi người đó đang làm việc (không bị "cho nghỉ" hôm đó). Lỗi do nhân viên gây ra dùng lại đúng luật chấm sai/thiếu món ở mục 7, không tạo luật riêng.
 - **Mở khóa Tóp mỡ** (mục 40): điều kiện `ngày ≥ 15` và `tiền ≥ 5.000.000đ` phải cùng đúng tại ĐÚNG 1 thời điểm kiểm tra (phép AND tức thời) — TUYỆT ĐỐI không cài thành 2 cờ "đã từng đạt ngày 15" và "đã từng có 5 triệu" rồi gộp sau, vì hai mốc đó có thể xảy ra ở hai thời điểm khác nhau không liên quan. Khi đủ điều kiện lần đầu: chỉ hiện nút "Mở khóa", không tự mở. Chỉ khi người chơi bấm nút đó mới đặt `state.tomMoUnlocked = true` vĩnh viễn.
 - **Trả lời đánh giá** (mục 41): chỉ là tính năng hiển thị/roleplay, KHÔNG có công thức ảnh hưởng tới sao, tiền hay bất kỳ số liệu gameplay nào — giữ đúng nguyên tắc lean, tránh phát sinh hệ thống cân bằng mới không cần thiết.
+- **Dĩa/Hộp/Bọc** (mục 28): là nguyên liệu tiêu hao thật, phải mua, không free. Dĩa dùng bộ đếm riêng tích lũy qua ngày (không reset theo ngày) để hao 1/5 lần, không được nhầm thành hao mỗi lần dùng như Hộp/Bọc.
+- **Giao trống** (mục 7): số món khớp = 0 là một nhánh xử lý HOÀN TOÀN riêng với bảng 1-5 sao bình thường — không tính tiền (không phải 0.5× như 1-2 sao), không cộng "Khách phục vụ", mà cộng "Khách bỏ đi". Chỉ cần ≥1 món khớp (kể cả chỉ có Cơm) thì quay lại dùng bảng sao bình thường.
+- **Giá vốn biến động theo ngày** (mục 34): bắt buộc reset toàn bộ giá vốn về gốc TRƯỚC khi roll sự kiện của ngày mới, mỗi ngày chỉ giữ đúng hiệu ứng của riêng ngày đó — không được để hiệu ứng ngày trước lọt sang ngày sau trong bất kỳ trường hợp nào (kể cả khi ngày sau trúng sự kiện khác).
+- **Combo** (mục 35): lưu dạng mảng động trong state, KHÔNG hard-code số lượng combo cố định trong code — phải có đủ 3 thao tác Thêm/Sửa/Xóa, giới hạn duy nhất là độ dài mảng tối đa 5.
+
+- **M30 / cloud:** Không triển khai đồng bộ Supabase trong bản hiện tại. Không tạo `js/cloudsync.js` / `js/cloud-config.js`. Save chỉ `localStorage` key `com_tam_save_v1`. Mục 39 GAME_DESIGN giữ làm tham chiếu tương lai, không bắt buộc code.
+- **Tóp mỡ (mục 40):** giá bán cộng thêm **7.000đ**/phần khi thêm vào đơn (khớp `data.js` / scoring).
+- **Combo (mục 35):** dữ liệu runtime là `state.combos` (mảng, max 5), không hard-code số combo cố định trong logic bán hàng.
+- 
+## Quy tắc UI màn Bán hàng (chống rối khi thêm món mới)
+- Vỉ nướng: chiều cao luôn tự co theo đúng số ô đang có (4/6/8), không đặt chiều cao cố định lớn hơn nội dung, không để lộ scrollbar bên trong vỉ.
+- Dĩa/Hộp/Bọc (mục 28): chỉ hiện đúng nút liên quan tới loại phục vụ của khách đang chọn — Tại quán chỉ hiện Dĩa; Mang đi chỉ hiện Hộp và Bọc. Không hiện cả 3 cùng lúc.
+- Danh sách món trong khay chia 3 nhóm có nhãn nhỏ: "Món chính" (luôn mở), "Nước mắm" và "Nước uống" (gập mặc định, tự bung khi đơn đang chọn cần món trong nhóm đó, hoặc bấm vào nhãn để mở). Khi thêm món/nhóm mới sau này, luôn xếp vào đúng 1 trong các nhóm này hoặc tạo nhóm gập mới — không thêm thẳng vào 1 lưới phẳng không phân nhóm.
+- Trong mỗi nhóm, món đang cần cho đơn hiện tại (viền xanh, mục 27) luôn xếp lên đầu nhóm.
+- Dòng hiển thị order (mục 25) giữ tối đa 1-2 dòng, giảm cỡ chữ hoặc rút gọn tên nếu cần, không để tràn quá 2 dòng trong bong bóng đơn.
 
 ## Yêu cầu riêng cho iOS
 - `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">`

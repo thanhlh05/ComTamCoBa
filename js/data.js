@@ -12,28 +12,62 @@ export const GAME_DATA = {
     trung: { id: 'trung', name: 'Trứng ốp la', price: 7000, cost: 2500, required: false, group: 'extra' },
     canh: { id: 'canh', name: 'Canh khổ qua', price: 5000, cost: 1500, required: false, group: 'extra', unlockCost: 150000 },
     tra: { id: 'tra', name: 'Trà đá', price: 5000, cost: 1000, required: false, group: 'drink' },
-      mam_cay: { id: 'mam_cay', name: 'Nước mắm cay', price: 0, cost: 500, required: false, group: 'sauce' },
-      mam_thuong: { id: 'mam_thuong', name: 'Nước mắm thường', price: 0, cost: 500, required: false, group: 'sauce' },
-      xa_xi: { id: 'xa_xi', name: 'Xá xị', price: 8000, cost: 2000, required: false, group: 'drink', needsDrinkFridge: true },
-      cam_ep: { id: 'cam_ep', name: 'Cam ép', price: 10000, cost: 3000, required: false, group: 'drink', needsDrinkFridge: true },
-      sua_dau: { id: 'sua_dau', name: 'Sữa đậu nành', price: 7000, cost: 1500, required: false, group: 'drink', needsDrinkFridge: true },  },
-    // M27 — Combo (mục 35)
-    // Giá combo = 50%–100% tổng giá lẻ active
-    combos: {
-      com_suon_tra: {
-        id: 'com_suon_tra',
-        name: 'Combo Cơm Sườn Trà',
-        items: ['com', 'suon', 'tra'],
-        // Giá mặc định = 90% tổng giá gốc
-        defaultRatio: 0.9,
-      },
-      com_suon_bi: {
-        id: 'com_suon_bi',
-        name: 'Combo Cơm Sườn Bì',
-        items: ['com', 'suon', 'bi'],
-        defaultRatio: 0.9,
-      },
+    mam_cay: { id: 'mam_cay', name: 'Nước mắm cay', price: 0, cost: 500, required: false, group: 'sauce' },
+    mam_thuong: { id: 'mam_thuong', name: 'Nước mắm thường', price: 0, cost: 500, required: false, group: 'sauce' },
+    xa_xi: { id: 'xa_xi', name: 'Xá xị', price: 8000, cost: 2000, required: false, group: 'drink', needsDrinkFridge: true },
+    cam_ep: { id: 'cam_ep', name: 'Cam ép', price: 10000, cost: 3000, required: false, group: 'drink', needsDrinkFridge: true },
+    sua_dau: { id: 'sua_dau', name: 'Sữa đậu nành', price: 7000, cost: 1500, required: false, group: 'drink', needsDrinkFridge: true },
+    top_mo: {
+      id: 'top_mo',
+      name: 'Tóp mỡ',
+      price: 7000,
+      cost: 15000,
+      required: false,
+      group: 'extra',
+      vip: true,
     },
+
+    dia: {
+      id: 'dia',
+      name: 'Dĩa',
+      price: 0,
+      cost: 2500,
+      required: false,
+      group: 'pack',
+    },
+    hop: {
+      id: 'hop',
+      name: 'Hộp',
+      price: 0,
+      cost: 1500,
+      required: false,
+      group: 'pack',
+    },
+    boc: {
+      id: 'boc',
+      name: 'Bọc',
+      price: 0,
+      cost: 300,
+      required: false,
+      group: 'pack',
+    },
+  },
+
+  // M27 — Combo (mục 35) — CÙNG CẤP với menu, không nằm trong menu
+  combos: {
+    com_suon_tra: {
+      id: 'com_suon_tra',
+      name: 'Combo Cơm Sườn Trà',
+      items: ['com', 'suon', 'tra'],
+      defaultRatio: 0.9,
+    },
+    com_suon_bi: {
+      id: 'com_suon_bi',
+      name: 'Combo Cơm Sườn Bì',
+      items: ['com', 'suon', 'bi'],
+      defaultRatio: 0.9,
+    },
+  },
   customers: {
     // Tỉ lệ khách gọi nước mắm (~55%)
     fishSauceChance: 0.55,
@@ -86,6 +120,10 @@ export const GAME_DATA = {
     xa_xi: 'xá xị',
     cam_ep: 'cam ép',
     sua_dau: 'sữa đậu',
+    top_mo: 'tóp mỡ',
+    dia: 'dĩa',
+    hop: 'hộp',
+    boc: 'bọc',
   },
 
   // M17 — câu thoại (gốc GAME_DATA)
@@ -224,6 +262,10 @@ export const GAME_DATA = {
       staffGrill: '🔥👩‍🍳',
       staffCook: '👩‍🍳',
       combo: '🍱',
+      top_mo: '🧈',
+      dia: '🍽',
+      hop: '📦',
+      boc: '🛍',
     },
   },
     // --- M13: Đánh giá (mục 21) ---

@@ -21,6 +21,10 @@ export const initialState = {
     xa_xi: 0,
     cam_ep: 0,
     sua_dau: 0,
+    top_mo: 0,
+    dia: 20,
+    hop: 20,
+    boc: 30,
   },
   upgrades: {},
   lastSummary: null,
@@ -44,7 +48,11 @@ export const initialState = {
   // M27 — giá combo
   comboPrices: {},
   pendingComboPrices: {},
-
+  // M37 — combo động, tối đa 5 combo
+  combos: [],
+  tomMoUnlocked: false,
+  // M35 — mỗi 5 lần dùng Dĩa → trừ 1 kho
+  diaUsageCount: 0,
   // M29 — cho nghỉ hôm nay (áp dụng ngày tiếp theo)
   staffRestPending: {
     staffGrill: false,
@@ -74,6 +82,20 @@ export function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
     activeState = getDefaultState();
+
+    // M37 — seed combo mặc định cho save mới
+    if (GAME_DATA.combos) {
+      activeState.combos = Object.values(GAME_DATA.combos)
+        .slice(0, 5)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          items: [...(c.items || [])],
+          defaultRatio: c.defaultRatio ?? 0.9,
+        }));
+    }
+
+    saveState(activeState);
     return activeState;
   }
 
@@ -107,14 +129,56 @@ export function loadState() {
         4: Number(parsed.starCounts?.[4]) || 0,
         5: Number(parsed.starCounts?.[5]) || 0,
       },
-      reviews: Array.isArray(parsed.reviews) ? parsed.reviews.slice(0, 30) : [],
+      reviews: Array.isArray(parsed.reviews)
+        ? parsed.reviews.slice(0, 30).map((r) => ({
+            ...r,
+            reply: typeof r.reply === 'string' ? r.reply : '',
+          }))
+        : [],
       typeServeGood: { ...(parsed.typeServeGood || {}) },
       menuPrices: { ...(parsed.menuPrices || {}) },
       pendingMenuPrices: { ...(parsed.pendingMenuPrices || {}) },
       comboPrices: { ...(parsed.comboPrices || {}) },
       pendingComboPrices: { ...(parsed.pendingComboPrices || {}) },
+      combos: Array.isArray(parsed.combos)
+        ? parsed.combos.slice(0, 5)
+        : [],
+      tomMoUnlocked: Boolean(parsed.tomMoUnlocked),
+      diaUsageCount: Number(parsed.diaUsageCount) || 0,
     };
-    return activeState;
+    // M37 — migration combo cứng → mảng động
+    if (!Array.isArray(activeState.combos)) {
+      activeState.combos = [];
+    }
+
+    if (
+      activeState.combos.length === 0 &&
+      GAME_DATA.combos
+    ) {
+      // Seed từ data.js lần đầu hoặc save cũ chưa có combos
+      activeState.combos = Object.values(GAME_DATA.combos).map((c) => ({
+        id: c.id,
+        name: c.name,
+        items: [...(c.items || [])],
+        defaultRatio: c.defaultRatio ?? 0.9,
+      }));
+    }
+
+    // Tối đa 5 combo
+    if (activeState.combos.length > 5) {
+      activeState.combos = activeState.combos.slice(0, 5);
+    }
+
+    if (!activeState.comboPrices) {
+      activeState.comboPrices = {};
+    }
+
+    if (!activeState.pendingComboPrices) {
+      activeState.pendingComboPrices = {};
+    }
+
+    saveState(activeState);
+    return activeState; 
   } catch (error) {
     console.warn('Không tải được save, dùng trạng thái mặc định:', error);
     activeState = getDefaultState();
@@ -140,28 +204,40 @@ export function applyOvernightSpoilage(state = getState()) {
   // Nếu đã mua tủ lạnh thì sườn và chả không bị hao
   const hasFridge = Boolean(state.upgrades && state.upgrades.fridge && state.upgrades.fridge > 0);
   if (!hasFridge) {
-    const spoilageItems = ['suon', 'cha'];
-    spoilageItems.forEach((id) => {
+    // Sườn / chả: mất 50%
+    ['suon', 'cha'].forEach((id) => {
       const current = Number(state.inventory[id]) || 0;
       if (current > 0) {
-        const lost = Math.floor(current * 0.5);
-        state.inventory[id] = current - lost;
+        state.inventory[id] = current - Math.floor(current * 0.5);
       }
     });
+
+    // M31 — Tóp mỡ: mất 70%
+    const tm = Number(state.inventory.top_mo) || 0;
+    if (tm > 0) {
+      state.inventory.top_mo = tm - Math.floor(tm * 0.7);
+    }
   }
 
   return state;
 }
 
 /**
- * Bắt đầu ngày mới: tăng ngày, áp dụng hao tồn kho qua đêm và lưu game.
+ * Bắt đầu ngày mới: tăng ngày, hao tồn kho, RESET giá vốn biến động, roll sự kiện mới.
+ * Thứ tự BẮT BUỘC (M38 / mục 34):
+ *   (1) đưa hiệu ứng giá vốn về gốc (xoá todayCostEvent)
+ *   (2) roll xem ngày mới có biến động không
+ *   (3) nếu trúng mới gắn todayCostEvent cho đúng 1 món
  */
 export function startNewDay(state = getState()) {
   state.day = (Number(state.day) || 1) + 1;
 
   applyOvernightSpoilage(state);
 
+  // M38 — (1) luôn reset hiệu ứng ngày cũ TRƯỚC khi roll
   state.todayCostEvent = null;
+
+  // M38 — (2)(3) roll sự kiện ngày mới (có thể null)
   rollTodayCostEvent(state);
 
   // M29 — áp dụng "cho nghỉ" đã chọn từ hôm trước
@@ -175,37 +251,51 @@ export function startNewDay(state = getState()) {
 }
 
 /**
- * M26 — gieo sự kiện giá vốn cho ngày hiện tại (gọi khi bắt đầu ngày / vào Chuẩn bị lần đầu trong ngày).
- * 20% từ ngày 3: 50/50 Sườn +30% hoặc Trứng -40%.
+ * M26/M34/M38 — gieo sự kiện giá vốn cho ngày HIỆN TẠI.
+ * Chỉ giữ event nếu forDay === day hiện tại; không bao giờ giữ event ngày cũ.
  */
 export function rollTodayCostEvent(state = getState()) {
   const cfg = GAME_DATA.costEvents;
+  const day = Number(state.day) || 1;
+
   if (!cfg) {
     state.todayCostEvent = null;
+    saveState(state);
     return null;
   }
-  const day = Number(state.day) || 1;
+
+  // Chưa tới ngày mở sự kiện
   if (day < (cfg.fromDay ?? 3)) {
     state.todayCostEvent = null;
     saveState(state);
     return null;
   }
-  // Đã có sự kiện cho đúng ngày này thì giữ
-  if (state.todayCostEvent && state.todayCostEvent.forDay === day) {
+
+  // Đã có event đúng ngày này (ví dụ gọi lại trong cùng ngày từ prep) → giữ
+  if (
+    state.todayCostEvent &&
+    state.todayCostEvent.forDay === day
+  ) {
     return state.todayCostEvent;
   }
+
+  // Event cũ / sai ngày → bỏ (M38: không cho lọt sang ngày mới)
+  state.todayCostEvent = null;
+
   if (Math.random() >= (cfg.chance ?? 0.2)) {
-    state.todayCostEvent = null;
     saveState(state);
     return null;
   }
+
   const list = cfg.list || [];
+
   if (!list.length) {
-    state.todayCostEvent = null;
     saveState(state);
     return null;
   }
+
   const pick = list[Math.floor(Math.random() * list.length)];
+
   state.todayCostEvent = {
     id: pick.id,
     name: pick.name,
@@ -214,6 +304,7 @@ export function rollTodayCostEvent(state = getState()) {
     message: pick.message,
     forDay: day,
   };
+
   saveState(state);
   return state.todayCostEvent;
 }
@@ -244,6 +335,10 @@ export function buyIngredient(itemId, batchCount = 10, state = getState()) {
 
   if (item.needsDrinkFridge && !state.upgrades?.drinkFridge) {
     return { success: false, error: 'Chưa mở khóa Tủ nước giải khát' };
+  }
+
+  if (itemId === 'top_mo' && !state.tomMoUnlocked) {
+    return { success: false, error: 'Chưa mở khóa Tóp mỡ' };
   }
 
   const unitCost = getEffectiveCost(itemId, state);
@@ -467,6 +562,119 @@ export function setStaffRestPending(
 
   state.staffRestPending[role] = Boolean(rest);
 
+  saveState(state);
+  return state;
+}
+
+/**
+ * M31 — đủ điều kiện mở khóa Tóp mỡ?
+ * AND tức thời: ngày ≥ 15 VÀ tiền ≥ 5.000.000
+ */
+export function canUnlockTomMo(state = getState()) {
+  if (state.tomMoUnlocked) return false; // đã mở rồi
+
+  const day = Number(state.day) || 1;
+  const money = Number(state.money) || 0;
+
+  return day >= 15 && money >= 5000000;
+}
+
+/**
+ * M31 — bấm xác nhận mở khóa Tóp mỡ (không trừ tiền)
+ */
+export function unlockTomMo(state = getState()) {
+  if (state.tomMoUnlocked) {
+    return { success: false, error: 'Đã mở khóa' };
+  }
+
+  if (!canUnlockTomMo(state)) {
+    return { success: false, error: 'Chưa đủ điều kiện' };
+  }
+
+  state.tomMoUnlocked = true;
+  saveState(state);
+
+  return { success: true };
+}
+
+/**
+ * M35 — tiêu hao Dĩa / Hộp / Bọc khi giao đúng loại.
+ * - Hộp, Bọc: trừ 1 ngay
+ * - Dĩa: +1 diaUsageCount; mỗi đủ 5 lần mới trừ 1 kho
+ * Trả về { ok, error? }
+ */
+export function consumePackaging(
+  serveType,
+  plateContainer,
+  plateBagged,
+  state = getState()
+) {
+  if (!state.inventory) state.inventory = {};
+
+  // Dựa vào plateContainer / bag để khớp service.js hiện tại
+  if (plateContainer === 'plate') {
+    const stock = Number(state.inventory.dia) || 0;
+
+    if (stock <= 0) {
+      return { ok: false, error: 'Hết Dĩa' };
+    }
+
+    state.diaUsageCount = (Number(state.diaUsageCount) || 0) + 1;
+
+    if (state.diaUsageCount % 5 === 0) {
+      state.inventory.dia = stock - 1;
+    }
+
+    saveState(state);
+    return { ok: true };
+  }
+
+  if (plateContainer === 'box') {
+    const hopStock = Number(state.inventory.hop) || 0;
+
+    if (hopStock <= 0) {
+      return { ok: false, error: 'Hết Hộp' };
+    }
+
+    state.inventory.hop = hopStock - 1;
+
+    if (plateBagged) {
+      const bocStock = Number(state.inventory.boc) || 0;
+
+      if (bocStock <= 0) {
+        // Hoàn lại hộp vừa trừ nếu thiếu bọc
+        state.inventory.hop = hopStock;
+        saveState(state);
+        return { ok: false, error: 'Hết Bọc' };
+      }
+
+      state.inventory.boc = bocStock - 1;
+    }
+
+    saveState(state);
+    return { ok: true };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * M37 — danh sách combo đang dùng (mảng state)
+ */
+export function getCombos(state = getState()) {
+  return Array.isArray(state.combos)
+    ? state.combos
+    : [];
+}
+
+/**
+ * M37 — lưu danh sách combo, tối đa 5 combo
+ */
+export function saveCombos(
+  combos,
+  state = getState()
+) {
+  state.combos = (combos || []).slice(0, 5);
   saveState(state);
   return state;
 }

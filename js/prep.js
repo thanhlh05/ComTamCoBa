@@ -7,6 +7,8 @@ import {
   rollTodayCostEvent,
   getEffectiveCost,
   setStaffRestPending,
+  canUnlockTomMo,
+  unlockTomMo,
 } from './state.js';
 import { GAME_DATA, ASSETS } from './data.js';
 import { formatMoney, formatStar } from './ui.js';
@@ -20,10 +22,14 @@ import {
   getPendingComboPrice,
   comboPriceBounds,
   setPendingComboPrice,
+  addCombo,
+  updateCombo,
+  removeCombo,
 } from './pricing.js';
 
 let activeTab = 'ingredients';
 let cachedOnOpenService = null;
+let editingComboId = null; // M37 — combo đang được chỉnh sửa
 let discardItemId = null;
 let discardMax = 0;
 let buyTargetId = null;
@@ -103,6 +109,12 @@ function spoilageHint(itemId, stock, state) {
   if (stock <= 0) return '';
 
   const hasFridge = Boolean(state.upgrades?.fridge);
+
+  if (itemId === 'top_mo' && !hasFridge) {
+    const lost = Math.floor(stock * 0.7);
+    return `<div class="spoil-hint spoil-warn">🟠 Qua đêm sẽ hao ${lost} phần (70%)</div>`;
+  }
+
   const canSpoil =
     (itemId === 'suon' || itemId === 'cha') && !hasFridge;
 
@@ -145,14 +157,27 @@ function renderPriceRow(itemId, state) {
  * Tạo HTML danh sách nguyên liệu — M15 mua 1/5/10/tùy chỉnh.
  */
 function renderIngredientsList(state) {
-  const items = Object.values(GAME_DATA.menu).filter((item) => item.group !== 'drink');
+  const unlockBanner =
+    canUnlockTomMo(state)
+      ? `<div class="tommo-unlock-banner">
+           <span>🔓 Đủ điều kiện mở khóa Tóp mỡ!</span>
+           <button type="button" class="buy-btn" data-action="unlock-tommo">Mở khóa</button>
+         </div>`
+      : '';
+
+  const items = Object.values(GAME_DATA.menu).filter((item) => {
+    if (item.group === 'drink') return false;
+    if (item.id === 'top_mo' && !state.tomMoUnlocked) return false;
+    return true;
+  });
+
   const ev = state.todayCostEvent;
 
   const banner = ev?.message
     ? `<div class="cost-event-banner">${ev.message}</div>`
     : '';
 
-  return banner + items
+  return unlockBanner + banner + items
     .map((item) => {
       const icon = ASSETS[item.id] || '🍚';
       const stock = Number(state.inventory?.[item.id]) || 0;
@@ -377,15 +402,44 @@ function renderDrinksList(state) {
     .join('');
 }
 
+
 function renderPricingList(state) {
   const menuItems = Object.values(GAME_DATA.menu || {}).filter((item) => {
     if (!item?.id) return false;
-    // Chưa tủ nước → ẩn xá xị / cam / sữa đậu
     if (item.needsDrinkFridge && !state.upgrades?.drinkFridge) return false;
-    // Chưa mở Chả+Canh → ẩn chả / canh (cùng luật)
-    if ((item.id === 'cha' || item.id === 'canh') && !state.upgrades?.unlockMenu) return false;
+    if (
+      (item.id === 'cha' || item.id === 'canh') &&
+      !state.upgrades?.unlockMenu
+    ) return false;
+    if (item.id === 'top_mo' && !state.tomMoUnlocked) return false;
+    if (item.group === 'pack') return false;
     return true;
   });
+
+  const combos = Array.isArray(state.combos) ? state.combos : [];
+  const canAdd = combos.length < 5;
+
+  const comboSection = `
+    <div class="combo-section">
+      <div class="combo-section-head">
+        <span class="combo-section-title">
+          🍱 Combo (${combos.length}/5)
+        </span>
+        ${
+          canAdd
+            ? `<button type="button" class="buy-btn combo-add-btn"
+                 data-action="combo-add">+ Thêm combo</button>`
+            : ''
+        }
+      </div>
+
+      ${
+        combos.length === 0
+          ? `<p class="combo-empty">Chưa có combo. Bấm "+ Thêm combo".</p>`
+          : combos.map((combo) => renderComboCard(combo, state)).join('')
+      }
+    </div>
+  `;
 
   return `
     <div class="pricing-table">
@@ -394,6 +448,7 @@ function renderPricingList(state) {
         <span class="pricing-active">Hiện tại</span>
         <span class="pricing-input-label">Giá mới</span>
       </div>
+
       ${menuItems.map((item) => {
         const active = getActivePrice(item.id, state);
         const pending = getPendingPrice(item.id, state);
@@ -409,7 +464,6 @@ function renderPricingList(state) {
             ? '<span class="price-label price-free">FREE</span>'
             : (() => {
                 const info = getPriceLabel(item.id, value);
-
                 return info
                   ? `<span class="price-label price-${info.kind}">${info.text}</span>`
                   : '';
@@ -444,75 +498,154 @@ function renderPricingList(state) {
               />
             </div>
 
-            <div class="pricing-meta">
-              ${label}
-            </div>
-
+            <div class="pricing-meta">${label}</div>
             ${note}
           </div>
         `;
       }).join('')}
+    </div>
 
-      ${Object.values(GAME_DATA.combos || {}).map((combo) => {
-        const { min, max, sum } =
-          comboPriceBounds(combo.id, state);
+    ${comboSection}
+  `;
+}
 
-        const pending =
-          getPendingComboPrice(combo.id, state);
 
-        const active =
-          state.comboPrices?.[combo.id];
+function renderComboCard(combo, state) {
+  const isEditing = editingComboId === combo.id;
+  const { min, max, sum } = comboPriceBounds(combo.id, state);
+  const pending = getPendingComboPrice(combo.id, state);
+  const active = state.comboPrices?.[combo.id];
+  const activeShow = Number.isFinite(active) ? active : pending;
 
-        const activeShow =
-          Number.isFinite(active)
-            ? active
-            : pending;
+  const note =
+    Number.isFinite(active) && active !== pending
+      ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>'
+      : '';
 
-        const note =
-          Number.isFinite(active) &&
-          active !== pending
-            ? '<div class="pricing-delay">Áp dụng từ ngày bán tiếp theo</div>'
-            : '';
+  const itemChips = (combo.items || [])
+    .map((id) => {
+      const name = GAME_DATA.menu[id]?.name || id;
+      return `<span class="combo-item-chip">${name}</span>`;
+    })
+    .join('') || '<span class="combo-item-empty">Chưa chọn món</span>';
 
-        return `
-          <div class="pricing-row pricing-combo">
-            <span class="pricing-name">
-              🍱 ${combo.name}
-            </span>
+  if (!isEditing) {
+    return `
+      <div class="combo-card" data-combo-id="${combo.id}">
+        <div class="combo-card-head">
+          <strong class="combo-name">🍱 ${combo.name}</strong>
+          <span class="combo-price-active">${formatMoney(activeShow)}</span>
+        </div>
 
-            <span class="pricing-active">
-              ${formatMoney(activeShow)}
-            </span>
+        <div class="combo-items">${itemChips}</div>
 
-            <div class="pricing-input-wrap">
-              <input
-                class="pricing-input"
-                type="number"
-                inputmode="numeric"
-                min="${min}"
-                max="${max}"
-                step="1000"
-                data-action="combo-price-input"
-                data-id="${combo.id}"
-                value="${pending}"
-                aria-label="Giá combo ${combo.name}"
-              />
-            </div>
+        <div class="combo-meta">
+          Khung ${formatMoney(min)}–${formatMoney(max)}
+          · Tổng lẻ ${formatMoney(sum)}
+        </div>
 
-            <div class="pricing-meta">
-              <span class="price-label price-mid">
-                Khung ${formatMoney(min)}–${formatMoney(max)}
-              </span>
-            </div>
+        ${note}
 
-            <div class="pricing-delay">
-              Tổng lẻ: ${formatMoney(sum)} · chỉ 50%–100%
-            </div>
+        <div class="combo-actions">
+          <button type="button" class="buy-btn"
+            data-action="combo-edit" data-id="${combo.id}">
+            Sửa
+          </button>
 
-            ${note}
-          </div>
-        `;
-      }).join('')}
+          <button type="button" class="discard-btn"
+            data-action="combo-delete" data-id="${combo.id}">
+            Xóa
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  const allPickable = Object.values(GAME_DATA.menu || {}).filter((item) => {
+    if (!item?.id) return false;
+    if (item.group === 'pack') return false;
+    if (item.id === 'top_mo' && !state.tomMoUnlocked) return false;
+    if (item.needsDrinkFridge && !state.upgrades?.drinkFridge) return false;
+
+    if (
+      (item.id === 'cha' || item.id === 'canh') &&
+      !state.upgrades?.unlockMenu
+    ) return false;
+
+    return true;
+  });
+
+  const checks = allPickable
+    .map((item) => {
+      const checked = (combo.items || []).includes(item.id)
+        ? 'checked'
+        : '';
+
+      return `
+        <label class="combo-pick">
+          <input
+            type="checkbox"
+            data-combo-item="${item.id}"
+            ${checked}
+          />
+          <span>${item.name}</span>
+        </label>
+      `;
+    })
+    .join('');
+
+  return `
+    <div class="combo-card editing" data-combo-id="${combo.id}">
+      <label class="combo-edit-label">
+        Tên combo
+        <input
+          class="combo-name-input"
+          type="text"
+          maxlength="20"
+          data-action="combo-name"
+          data-id="${combo.id}"
+          value="${combo.name || ''}"
+        />
+      </label>
+
+      <div class="combo-pick-list">${checks}</div>
+
+      <p class="combo-hint">Chọn 2–4 món · Giá 50%–100% tổng lẻ</p>
+
+      <div class="pricing-input-wrap">
+        <input
+          class="pricing-input"
+          type="number"
+          inputmode="numeric"
+          min="${min}"
+          max="${max}"
+          step="1000"
+          data-action="combo-price-input"
+          data-id="${combo.id}"
+          value="${pending}"
+          aria-label="Giá combo ${combo.name}"
+        />
+      </div>
+
+      <div class="pricing-meta">
+        <span class="price-label price-mid">
+          Khung ${formatMoney(min)}–${formatMoney(max)}
+        </span>
+      </div>
+
+      <div class="combo-meta">Tổng lẻ: ${formatMoney(sum)}</div>
+
+      <div class="combo-actions">
+        <button type="button" class="buy-btn"
+          data-action="combo-save" data-id="${combo.id}">
+          Lưu
+        </button>
+
+        <button type="button" class="buy-cancel-btn"
+          data-action="combo-cancel">
+          Huỷ
+        </button>
+      </div>
     </div>
   `;
 }
@@ -659,16 +792,82 @@ function handleContentClick(event) {
       renderPrepScreen();
     }
 
+  } else if (action === 'unlock-tommo') {
+    const result = unlockTomMo();
+
+    if (result.success) {
+      renderPrepScreen();
+    }
+
   } else if (action === 'discard-ingredient') {
     openDiscardDialog(
       id,
       Number(button.dataset.stock) || 0
     );
+  
   } else if (action === 'price-up') {
     adjustPendingPrice(id, +1);
     renderPrepScreen();
+
   } else if (action === 'price-down') {
     adjustPendingPrice(id, -1);
+    renderPrepScreen();
+
+  } else if (action === 'combo-add') {
+    const newId = addCombo();
+
+    if (newId) {
+      editingComboId = newId;
+      activeTab = 'pricing';
+      renderPrepScreen();
+    }
+
+  } else if (action === 'combo-edit') {
+    editingComboId = id;
+    renderPrepScreen();
+
+  } else if (action === 'combo-cancel') {
+    editingComboId = null;
+    renderPrepScreen();
+
+  } else if (action === 'combo-save') {
+    const card = button.closest('.combo-card');
+    if (!card) return;
+
+    const nameInput = card.querySelector('.combo-name-input');
+    const name = (nameInput?.value || '').trim().slice(0, 20);
+
+    const checked = [
+      ...card.querySelectorAll('input[data-combo-item]:checked'),
+    ].map((el) => el.dataset.comboItem);
+
+    if (checked.length < 2) {
+      window.alert('Combo phải có ít nhất 2 món!');
+      return;
+    }
+
+    if (checked.length > 4) {
+      window.alert('Combo chỉ được chọn tối đa 4 món!');
+      return;
+    }
+
+    updateCombo(id, {
+      name: name || 'Combo',
+      items: checked,
+    });
+
+    editingComboId = null;
+    renderPrepScreen();
+
+  } else if (action === 'combo-delete') {
+    if (!window.confirm('Xóa combo này?')) return;
+
+    removeCombo(id);
+
+    if (editingComboId === id) {
+      editingComboId = null;
+    }
+
     renderPrepScreen();
   }
 }
@@ -1073,6 +1272,63 @@ export function initPrepScreen(options = {}) {
 
     setStaffRestPending(id, input.checked);
     renderPrepScreen();
+  });
+
+  // M37 — Tick/bỏ tick món trong combo: chỉ cập nhật khung giá preview
+  contentEl?.addEventListener('change', (event) => {
+    const cb = event.target.closest('input[data-combo-item]');
+    if (!cb) return;
+
+    const card = cb.closest('.combo-card.editing');
+    if (!card) return;
+
+    const comboId = card.dataset.comboId;
+    if (!comboId) return;
+
+    const checked = [
+      ...card.querySelectorAll('input[data-combo-item]:checked'),
+    ].map((el) => el.dataset.comboItem);
+
+    // Tính tổng lẻ tạm thời, KHÔNG ghi vào state
+    const sum = checked.reduce((total, itemId) => {
+      return total + getActivePrice(itemId, getState());
+    }, 0);
+
+    const min = Math.round(sum * 0.5);
+    const max = Math.round(sum * 1.0);
+
+    const priceInput = card.querySelector(
+      'input[data-action="combo-price-input"]'
+    );
+
+    if (priceInput) {
+      priceInput.min = String(min);
+      priceInput.max = String(max);
+
+      const current = Math.round(Number(priceInput.value));
+
+      if (Number.isFinite(current)) {
+        priceInput.value = String(
+          Math.max(min, Math.min(max, current))
+        );
+      }
+    }
+
+    const rangeLabel = card.querySelector(
+      '.pricing-meta .price-label'
+    );
+
+    if (rangeLabel) {
+      rangeLabel.textContent =
+        `Khung ${formatMoney(min)}–${formatMoney(max)}`;
+    }
+
+    const sumEl = card.querySelector('.combo-meta');
+
+    if (sumEl) {
+      sumEl.textContent =
+        `Tổng lẻ: ${formatMoney(sum)}`;
+    }
   });
 
   contentEl?.addEventListener('input', handlePricingInput);

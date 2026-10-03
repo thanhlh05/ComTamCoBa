@@ -92,6 +92,14 @@ function updateHUD() {
   }
 }
 
+/** Giờ ảo hiện tại dạng HH:MM (mục 15) — dùng cho đánh giá */
+export function getVirtualClockString() {
+  const currentGameMins = Math.floor(virtualMinutes);
+  const displayHour = openHour + Math.floor(currentGameMins / 60);
+  const displayMin = currentGameMins % 60;
+  return `${String(displayHour).padStart(2, '0')}:${String(displayMin).padStart(2, '0')}`;
+}
+
 function spawnCustomer() {
   const state = getState();
   const unlocked = GAME_DATA.customers.types.filter((t) => t.unlockDay <= (state.day || 1));
@@ -122,18 +130,22 @@ function spawnCustomer() {
 
   let isComboOrder = false;
 
-  // M27 — ~20% khách gọi đúng 1 combo
+  // M27/M37 — ~20% khách gọi đúng 1 combo đang bật (ít nhất 2 món)
   // Không kèm mắm để khớp giá combo.
-  if (Math.random() < 0.2 && GAME_DATA.combos) {
-    const list = Object.values(GAME_DATA.combos);
+  const activeCombos = (
+    Array.isArray(state.combos) ? state.combos : []
+  ).filter(
+    (c) => Array.isArray(c.items) && c.items.length >= 2
+  );
 
-    if (list.length > 0) {
-      const combo =
-        list[Math.floor(Math.random() * list.length)];
+  if (Math.random() < 0.2 && activeCombos.length > 0) {
+    const combo =
+      activeCombos[
+        Math.floor(Math.random() * activeCombos.length)
+      ];
 
-      order = [...combo.items];
-      isComboOrder = true;
-    }
+    order = [...combo.items];
+    isComboOrder = true;
   }
 
   // M21 — ~55% gọi kèm nước mắm
@@ -199,9 +211,14 @@ function renderCustomers() {
       const leadId = c.order.includes('suon') ? 'suon' : 'com';
       const leadIcon = ASSETS[leadId] || '🍚';
 
+      const state = getState();
       const comboHit = matchCombo(c.order);
+
       const orderText = comboHit
-        ? `🍱 ${GAME_DATA.combos[comboHit]?.name || 'Combo'}`
+        ? `🍱 ${
+            (Array.isArray(state.combos) ? state.combos : [])
+              .find((combo) => combo.id === comboHit)?.name || 'Combo'
+          }`
         : formatOrderShort(c.order);
 
       const serveIcon = serveTypeIcon(c.serveType);
@@ -235,58 +252,191 @@ function resetPlateServeState() {
   updateServeTypeBar();
 }
 
+/** M35 — trừ Dĩa/Hộp/Bọc sau khi giao thành công */
+function consumePackagingAfterDeliver(plateContainer, plateBagged) {
+  const state = getState();
+  if (!state.inventory) state.inventory = {};
+
+  if (plateContainer === 'plate') {
+    const stock = Number(state.inventory.dia) || 0;
+
+    if (stock <= 0) return;
+
+    state.diaUsageCount =
+      (Number(state.diaUsageCount) || 0) + 1;
+
+    // Mỗi 5 lần dùng Dĩa mới trừ 1 Dĩa
+    if (state.diaUsageCount % 5 === 0) {
+      state.inventory.dia = stock - 1;
+    }
+
+    saveState(state);
+    return;
+  }
+
+  if (plateContainer === 'box') {
+    const hop = Number(state.inventory.hop) || 0;
+
+    if (hop > 0) {
+      state.inventory.hop = hop - 1;
+    }
+
+    if (plateBagged) {
+      const boc = Number(state.inventory.boc) || 0;
+
+      if (boc > 0) {
+        state.inventory.boc = boc - 1;
+      }
+    }
+
+    saveState(state);
+  }
+}
+
 function updateServeTypeBar() {
+  const state = getState();
   const customer = customers.find((c) => c.id === selectedCustomerId);
+
   const btnPlate = document.getElementById('btn-container-plate');
   const btnBox = document.getElementById('btn-container-box');
   const btnBag = document.getElementById('btn-bag');
 
+  const diaStock = Number(state.inventory?.dia) || 0;
+  const hopStock = Number(state.inventory?.hop) || 0;
+  const bocStock = Number(state.inventory?.boc) || 0;
+
   const hasCustomer = Boolean(customer);
+  const isTakeaway =
+    hasCustomer && customer.serveType === SERVE_TAKEAWAY;
+
+  // Chỉ hiện nút đúng loại phục vụ
+  // Tại quán → chỉ Dĩa | Mang đi → chỉ Hộp + Bọc
   if (btnPlate) {
-    btnPlate.disabled = !hasCustomer;
-    btnPlate.classList.toggle('active', plateContainer === 'plate');
-  }
-  if (btnBox) {
-    btnBox.disabled = !hasCustomer;
-    btnBox.classList.toggle('active', plateContainer === 'box');
-  }
-  if (btnBag) {
-    // Bọc chỉ bật khi đã chọn Hộp + khách mang đi
-    const canBag =
-      hasCustomer &&
-      plateContainer === 'box' &&
-      customer.serveType === SERVE_TAKEAWAY;
-    btnBag.disabled = !canBag;
-    btnBag.classList.toggle('active', plateBagged);
+    const showPlate = hasCustomer && !isTakeaway;
+
+    btnPlate.classList.toggle(
+      'serve-hidden',
+      !showPlate
+    );
+
+    btnPlate.disabled =
+      !showPlate || diaStock <= 0;
+
+    btnPlate.classList.toggle(
+      'active',
+      plateContainer === 'plate'
+    );
+
+    btnPlate.textContent =
+      `🍽 Dĩa (${diaStock})`;
   }
 
-  // Khóa nút món khi chưa chọn dĩa/hộp đúng hướng dẫn
+  if (btnBox) {
+    const showBox = hasCustomer && isTakeaway;
+
+    btnBox.classList.toggle(
+      'serve-hidden',
+      !showBox
+    );
+
+    btnBox.disabled =
+      !showBox || hopStock <= 0;
+
+    btnBox.classList.toggle(
+      'active',
+      plateContainer === 'box'
+    );
+
+    btnBox.textContent =
+      `📦 Hộp (${hopStock})`;
+  }
+
+  if (btnBag) {
+    const showBag = hasCustomer && isTakeaway;
+
+    btnBag.classList.toggle(
+      'serve-hidden',
+      !showBag
+    );
+
+    const canBag =
+      showBag &&
+      plateContainer === 'box' &&
+      bocStock > 0;
+
+    btnBag.disabled = !canBag;
+
+    btnBag.classList.toggle(
+      'active',
+      plateBagged
+    );
+
+    btnBag.textContent =
+      `🛍 Bọc (${bocStock})`;
+  }
+
+  // Khóa nút món khi chưa chọn Dĩa/Hộp
   const locked = !plateContainer;
-  document.querySelectorAll('#ing-buttons button[data-ing]').forEach((btn) => {
-    btn.disabled = locked;
-    btn.classList.toggle('serve-locked', locked);
-  });
+
+  document
+    .querySelectorAll('#ing-buttons button[data-ing]')
+    .forEach((btn) => {
+      btn.disabled = locked;
+      btn.classList.toggle(
+        'serve-locked',
+        locked
+      );
+    });
 }
 
 function handleServeAction(action) {
-  const customer = customers.find((c) => c.id === selectedCustomerId);
+  const customer =
+    customers.find((c) => c.id === selectedCustomerId);
+
   if (!customer) {
     showServiceToast('Chọn khách trước!');
     return;
   }
+
+  const state = getState();
+
   if (action === 'plate') {
-    plateContainer = 'plate';
-    plateBagged = false;
-  } else if (action === 'box') {
-    plateContainer = 'box';
-    plateBagged = false;
-  } else if (action === 'bag') {
-    if (plateContainer !== 'box' || customer.serveType !== SERVE_TAKEAWAY) {
-      showServiceToast('Chỉ bọc khi khách mang đi và đã chọn Hộp!');
+    if ((Number(state.inventory?.dia) || 0) <= 0) {
+      showServiceToast('Hết Dĩa trong kho!');
       return;
     }
+
+    plateContainer = 'plate';
+    plateBagged = false;
+
+  } else if (action === 'box') {
+    if ((Number(state.inventory?.hop) || 0) <= 0) {
+      showServiceToast('Hết Hộp trong kho!');
+      return;
+    }
+
+    plateContainer = 'box';
+    plateBagged = false;
+
+  } else if (action === 'bag') {
+    if (
+      plateContainer !== 'box' ||
+      customer.serveType !== SERVE_TAKEAWAY
+    ) {
+      showServiceToast(
+        'Chỉ bọc khi khách mang đi và đã chọn Hộp!'
+      );
+      return;
+    }
+
+    if ((Number(state.inventory?.boc) || 0) <= 0) {
+      showServiceToast('Hết Bọc trong kho!');
+      return;
+    }
+
     plateBagged = true;
   }
+
   updateServeTypeBar();
 }
 
@@ -323,40 +473,154 @@ function getNeededCounts() {
   return need;
 }
 
-/** Cập nhật nhãn tồn kho + viền xanh trên nút món (mục 27) */
+/** Cập nhật nhãn tồn kho + viền xanh + sắp xếp needed lên đầu + bung nhóm */
 function updateIngredientButtons() {
   const state = getState();
   const need = getNeededCounts();
   const trayCount = getTray().length;
 
-  document.querySelectorAll('#ing-buttons button[data-ing]').forEach((btn) => {
-    const id = btn.dataset.ing;
-    const item = GAME_DATA.menu[id];
-    if (!item) return;
+  const GROUP_ITEMS = {
+    main: [
+      'com',
+      'suon',
+      'bi',
+      'trung',
+      'top_mo',
+      'cha',
+      'canh',
+    ],
+    sauce: [
+      'mam_cay',
+      'mam_thuong',
+    ],
+    drink: [
+      'tra',
+      'xa_xi',
+      'cam_ep',
+      'sua_dau',
+    ],
+  };
 
-    const stock =
-      id === 'suon'
-        ? trayCount // sườn: số trong khay chín (lắp đĩa dùng khay)
-        : Number(state.inventory?.[id]) || 0;
+  // 1. Cập nhật label + viền xanh từng nút
+  document
+    .querySelectorAll('#ing-buttons button[data-ing]')
+    .forEach((btn) => {
+      const id = btn.dataset.ing;
+      const item = GAME_DATA.menu[id];
 
-    // Giữ icon + tên ngắn + (số)
-    const icon = ASSETS[id] || '';
-    const shortName =
-      GAME_DATA.orderShortNames?.[id] ||
-      item.name.replace(/^Cơm tấm$/, 'Cơm') ||
-      id;
-    // Hiển thị: với sườn hiện cả kho sống / khay (để khỏi nhầm)
-    let label;
-    if (id === 'suon') {
-      const live = Number(state.inventory?.suon) || 0;
-      label = `${icon} ${shortName} (${live}/${trayCount})`;
-    } else {
-      label = `${icon} ${shortName} (${stock})`;
+      if (!item) return;
+
+      const stock =
+        id === 'suon'
+          ? trayCount
+          : Number(state.inventory?.[id]) || 0;
+
+      const icon = ASSETS[id] || '';
+
+      const shortName =
+        GAME_DATA.orderShortNames?.[id] ||
+        item.name.replace(/^Cơm tấm$/, 'Cơm') ||
+        id;
+
+      let label;
+
+      if (id === 'suon') {
+        const live =
+          Number(state.inventory?.suon) || 0;
+
+        label =
+          `${icon} ${shortName} (${live}/${trayCount})`;
+      } else {
+        label =
+          `${icon} ${shortName} (${stock})`;
+      }
+
+      btn.textContent = label;
+
+      const needed = Boolean(need[id]);
+
+      btn.classList.toggle(
+        'ing-needed',
+        needed
+      );
+    });
+
+  // 2. Trong mỗi nhóm:
+  // món đang cần (viền xanh) xếp lên đầu
+  Object.entries(GROUP_ITEMS).forEach(
+    ([groupId, ids]) => {
+      const body =
+        document.getElementById(
+          `ing-group-${groupId}`
+        );
+
+      if (!body) return;
+
+      const buttons = ids
+        .map((id) =>
+          body.querySelector(
+            `button[data-ing="${id}"]`
+          )
+        )
+        .filter(Boolean);
+
+      // needed trước,
+      // giữ thứ tự tương đối trong mỗi nhóm
+      buttons.sort((a, b) => {
+        const an =
+          a.classList.contains('ing-needed')
+            ? 0
+            : 1;
+
+        const bn =
+          b.classList.contains('ing-needed')
+            ? 0
+            : 1;
+
+        return an - bn;
+      });
+
+      buttons.forEach((btn) => {
+        body.appendChild(btn);
+      });
     }
-    btn.textContent = label;
+  );
 
-    const needed = Boolean(need[id]);
-    btn.classList.toggle('ing-needed', needed);
+  // 3. Tự bung nhóm sauce/drink
+  // nếu đơn đang chọn cần món trong nhóm đó.
+  // main luôn mở.
+  ['sauce', 'drink'].forEach((groupId) => {
+    const groupEl =
+      document.querySelector(
+        `.ing-group[data-group="${groupId}"]`
+      );
+
+    if (!groupEl) return;
+
+    const ids =
+      GROUP_ITEMS[groupId] || [];
+
+    const hasNeed = ids.some(
+      (id) => need[id] > 0
+    );
+
+    if (hasNeed) {
+      groupEl.classList.remove(
+        'collapsed'
+      );
+
+      const label =
+        groupEl.querySelector(
+          '[data-group-toggle]'
+        );
+
+      if (label) {
+        label.setAttribute(
+          'aria-expanded',
+          'true'
+        );
+      }
+    }
   });
 }
 
@@ -413,6 +677,53 @@ function deliverPlate() {
   const result = scoreOrder(customer, currentPlate, { serveErrors });
   const state = getState();
 
+  // M36 — giao trống: không tiền, tính "bỏ đi", 1★ phàn nàn
+  if (result.isEmptyDelivery) {
+    recordRating(1);
+
+    pushReview({
+      stars: 1,
+      reason: 'left',
+      customerType: customer.type,
+      orderIds: customer.order,
+      missing: result.missing || [],
+      extra: result.extra || [],
+      gameTime: getVirtualClockString(),
+    });
+
+    if (dayStats) {
+      dayStats.leaveCount = (dayStats.leaveCount || 0) + 1;
+      // KHÔNG tăng servedCount / revenue / tips
+    }
+
+    // Vẫn tiêu hao Dĩa/Hộp/Bọc nếu đã chọn
+    consumePackagingAfterDeliver(
+      plateContainer,
+      plateBagged
+    );
+
+    customers = customers.filter((c) => c.id !== customer.id);
+    selectedCustomerId = customers[0]?.id || null;
+    currentPlate = [];
+
+    resetPlateServeState();
+    renderPlate();
+    updateIngredientButtons();
+    renderCustomers();
+    updateServeTypeBar();
+    updateHUD();
+
+    if (isClosing && customers.length === 0) {
+      finishDay();
+    }
+
+    showServiceToast(
+      `Khách ${customer.type?.label || ''} từ chối nhận (đĩa trống) — không tính tiền`
+    );
+
+    return;
+  }
+
   // Khách quen: +5% boa trên giá đơn (mục 25)
   let tipExtra = 0;
   if (customer.isRegular && result.stars >= 4) {
@@ -421,6 +732,12 @@ function deliverPlate() {
   const totalEarned = result.totalEarned + tipExtra;
   state.money += totalEarned;
   recordRating(result.stars);
+
+  // M35 — tiêu hao Dĩa/Hộp/Bọc sau khi giao thành công
+  consumePackagingAfterDeliver(
+    plateContainer,
+    plateBagged
+  );
 
   // Đếm phục vụ ≥4★ theo loại (mở khách quen từ lần 5)
   if (result.stars >= 4 && customer.type?.id) {
@@ -444,6 +761,7 @@ function deliverPlate() {
     orderIds: customer.order,
     missing: result.missing || [],
     extra: result.extra || [],
+    gameTime: getVirtualClockString(),
   });
 
   dayStats.servedCount++;
@@ -539,6 +857,7 @@ function updateCustomers(dt) {
         reason: 'left',
         customerType: c.type,
         orderIds: c.order,
+        gameTime: getVirtualClockString(),
       });
       dayStats.leaveCount++;
       queueChanged = true;
@@ -801,6 +1120,10 @@ export function startService() {
   document.getElementById('btn-ing-cam-ep')?.classList.toggle('hidden', !hasDrinkFridge);
   document.getElementById('btn-ing-sua-dau')?.classList.toggle('hidden', !hasDrinkFridge);
 
+// M31 — Tóp mỡ chỉ hiện khi đã mở khóa
+document
+  .getElementById('btn-ing-top-mo')
+  ?.classList.toggle('hidden', !state.tomMoUnlocked);  
   updateHUD();
   initGrill(getGrillSlotCount());
 
@@ -854,6 +1177,40 @@ export function initServiceScreen() {
   document.getElementById('ing-buttons')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-ing]');
     if (btn) addIngredientToPlate(btn.dataset.ing);
+  });
+
+  // Gập/mở nhóm Nước mắm / Nước uống
+// (Món chính luôn mở)
+document
+  .getElementById('ing-buttons')
+  ?.addEventListener('click', (e) => {
+    const label =
+      e.target.closest('[data-group-toggle]');
+
+    if (!label) return;
+
+    const groupId =
+      label.dataset.groupToggle;
+
+    if (groupId === 'main') return;
+
+    const groupEl =
+      label.closest('.ing-group');
+
+    if (!groupEl) return;
+
+    const willOpen =
+      groupEl.classList.contains('collapsed');
+
+    groupEl.classList.toggle(
+      'collapsed',
+      !willOpen
+    );
+
+    label.setAttribute(
+      'aria-expanded',
+      willOpen ? 'true' : 'false'
+    );
   });
 
   document.getElementById('serve-type-bar')?.addEventListener('click', (e) => {

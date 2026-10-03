@@ -178,7 +178,92 @@
 - **Còn dở**: M25 — Tab con "Nước" và mở khóa đồ uống.
 - **Bước tiếp theo**: M25 (`js/drinks.js`, `js/prep.js`, `js/data.js`).
 
-## Trạng thái hiện tại
-- **Đã xong:** M1–M10, M13–M24.
-- **PAUSED:** M11, M12.
-- **Bước tiếp:** M25 — Tab con "Nước" và mở khóa đồ uống.
+## Mốc 25 — Tab con "Nước" + tủ nước giải khát
+- Tab **Nước** trong Chuẩn bị; nâng cấp Tủ nước giải khát; Xá xí / Cam ép / Sữa đậu nành khóa đến khi mua tủ.
+- **File:** `js/data.js`, `js/prep.js`, `js/state.js`, `index.html`, `style.css`.
+
+## Mốc 26 — Biến động giá vốn theo ngày
+- Từ ngày 3: 20% “Sườn +30%” / “Trứng −40%”; reset vốn về gốc trước khi roll ngày mới; nhãn giá chỉ dịch món bị sự kiện.
+- **File:** `js/state.js`, `js/pricing.js`, `js/prep.js`.
+
+## Mốc 27 — Combo (cơ bản)
+- Combo trong tab Giá bán; khung 50%–100% tổng lẻ; ~20% khách order combo; scoring dùng giá combo khi khớp đủ.
+- **File:** `js/pricing.js`, `js/data.js`, `js/service.js`, `js/scoring.js`, `js/prep.js`.
+
+## Mốc 28 — Mở rộng dữ liệu mẫu
+- 30 tên khách; 4–5 câu thoại/loại; chọn món thêm đều hơn.
+- **File:** `js/data.js`.
+
+## Mốc 29 — Nhân viên Nướng / Làm món
+- 2 nâng cấp riêng 350k; tự nhấc sườn / tự lắp món; lỗi 2% / 1%; lương 40k/người; công tắc “Cho nghỉ”.
+- Nhân viên Làm món: dừng nếu thiếu hàng, không spam toast khi thêm đúng; chỉ toast khi lắp nhầm hoặc hết món lần đầu.
+- **File:** `js/state.js`, `js/data.js`, `js/prep.js`, `js/service.js`, `js/summary.js`, `style.css`.
+
+## Mốc 30 — Supabase
+- **BỎ** theo yêu cầu: giữ save localStorage only, không `cloudsync.js` / `cloud-config.js`.
+
+## Mốc 31 — Tóp mỡ (VIP)
+- Mở khóa AND (ngày ≥ 15, tiền ≥ 5M); nút xác nhận; giá bán +7.000đ; không tính thừa món; ≥3★ → +1 sao +10% boa; hao 70% nếu chưa tủ lạnh.
+- **File:** `js/data.js`, `js/state.js`, `js/prep.js`, `js/service.js`, `js/scoring.js`, `style.css`.
+
+## Mốc 32 — Trả lời đánh giá
+- Nút “Trả lời” trên từng review (≤150 ký tự); chỉ hiển thị, không ảnh hưởng gameplay.
+- **File:** `js/reviews.js`, `style.css`.
+
+## Mốc 35 — Mua & hao Dĩa / Hộp / Bọc
+- 3 nguyên liệu pack; Hộp/Bọc trừ 1/lần; Dĩa `diaUsageCount` trừ 1 mỗi 5 lần; hiện số trên nút phục vụ.
+- **File:** `js/data.js`, `js/state.js`, `js/prep.js`, `js/service.js`, `index.html`.
+
+## Mốc 36 — Giao trống
+- 0 món khớp order → không tiền, `leaveCount++`, 1★ + review “bỏ đi”, không `servedCount`.
+- **File:** `js/scoring.js`, `js/service.js`.
+
+## Sửa lỗi — Giờ trên đánh giá
+- Review dùng **giờ ảo game** (`getVirtualClockString` từ `service.js`), không dùng giờ máy thật.
+- **File:** `js/service.js`, `js/reviews.js`.
+
+## Mốc 37 — Combo động Thêm / Sửa / Xóa
+- **Đã làm**:
+  - `state.combos` mảng động tối đa 5; seed từ `GAME_DATA.combos` khi save cũ rỗng.
+  - Tab Giá bán: + Thêm combo, Sửa (tên/món/giá), Xóa (xác nhận); khung 50%–100% tổng giá lẻ active.
+  - Spawn ~20% khách order combo ≥2 món; `matchCombo` đọc `state.combos`.
+- **File:** `js/state.js`, `js/pricing.js`, `js/prep.js`, `js/service.js`, `style.css`, `js/data.js` (seed).
+
+## Mốc 38 — Reset giá vốn biến động mỗi ngày
+- **Đã làm**:
+  - `startNewDay`: (1) `todayCostEvent = null` → (2) `rollTodayCostEvent` → (3) chỉ gắn event mới nếu trúng.
+  - Event ngày cũ không lọt sang ngày mới; `getEffectiveCost` / nhãn giá theo event đúng món.
+- **File:** `js/state.js` (`startNewDay`, `rollTodayCostEvent`).
+- **Nghiệm thu:** Ngày 4 suon_up → vốn 11.700; ngày 5 reset → 9.000; ngày 5 trung_down → sườn gốc, trứng 1.500.
+
+## UI màn Bán hàng (quy tắc AGENTS)
+- Vỉ co theo 4/6/8 ô, không scrollbar thừa.
+- Dĩa / Hộp / Bọc: chỉ hiện nút đúng loại phục vụ khách đang chọn.
+- Khay 3 nhóm: Món chính (luôn mở) | Nước mắm | Nước uống (gập mặc định, tự bung khi cần).
+- Trong nhóm: món cần (viền xanh) xếp lên đầu; order bubble tối đa 1–2 dòng.
+- Toast service: absolute overlay, hạn chế đẩy layout (vẫn có thể tinh chỉnh sau M12).
+- **File:** `index.html`, `style.css`, `js/service.js`, `js/grill.js`.
+
+## Trạng thái hiện tại (sau M38)
+
+| Nhóm | Trạng thái |
+|------|------------|
+| **M1–M10** | Đã xong (khung, prep, service, summary, nav, settings, save ID, doanh thu, tutorial) |
+| **M13–M29** | Đã xong (đánh giá, kho, mua SL, giá, order, heSoSao, dĩa/hộp, mắm, báo hết, đóng cửa, tab giá, nước, vốn biến động, combo cơ bản, data, nhân viên) |
+| **M31–M32** | Đã xong (Tóp mỡ +7.000đ, trả lời review) |
+| **M35–M38** | Đã xong (pack Dĩa/Hộp/Bọc, giao trống, combo CRUD, reset vốn) |
+| **M30 Supabase** | **BỎ** — chỉ localStorage (`com_tam_save_v1`) |
+| **M33–M34** | Tùy chọn (best-seller, mốc thưởng ngày) — chưa làm |
+| **M11** | PAUSED — sự kiện mục 9 + Web Audio + hiệu ứng nhỏ |
+| **M12** | PAUSED — artwork thay emoji |
+
+**Ghi chú kỹ thuật đã chốt**
+- Tóp mỡ: giá bán cộng **7.000đ** (không còn 25.000đ).
+- Review: giờ **ảo game** (`getVirtualClockString`), không giờ máy.
+- Combo: mảng `state.combos` max 5; giá 50–100% tổng lẻ.
+- Nhân viên Làm món: dừng khi thiếu hàng; không spam toast khi thêm đúng.
+
+**Bước tiếp theo**
+1. Commit toàn bộ M1–M38 + UI Bán hàng.
+2. Chơi thử dài (ổn định / console sạch).
+3. **M11** → **M12** (hoặc M33/M34 nếu muốn thêm cosmetic).

@@ -2,9 +2,16 @@
 
 Cách dùng: mỗi mốc mở **phiên chat mới** trong Codex/Antigravity, dán đúng 1 prompt. Test xong thì `git commit` rồi mới sang mốc kế.
 
-Đã hoàn thành: M1 → M10, M13 → M23 (gồm heSoSao, tồn kho, dĩa/hộp, nước mắm, báo hết, đóng cửa bán hết queue).
-M11/M12 vẫn PAUSED.
-Tiếp theo: M24 → M29 (rồi M30+ nếu cần).
+**Đã hoàn thành:** M1 → M10, M13 → M29, M31 → M32, M35 → M38  
+(kèm UI màn Bán hàng theo AGENTS; giá Tóp mỡ 7.000đ; review giờ ảo).
+
+**Bỏ:** M30 (Supabase) — save chỉ localStorage.
+
+**PAUSED:** M11 (sự kiện + âm thanh + hiệu ứng), M12 (artwork).
+
+**Tùy chọn chưa làm:** M33 (best-seller), M34 (mốc thưởng ngày).
+
+**Tiếp theo:** M11 → M12 (sau khi commit & chơi thử ổn định).
 
 ---
 
@@ -443,7 +450,66 @@ Nghiệm thu: chơi hoặc chỉnh nhanh tới ngày 7, thấy popup và tiền 
 
 ---
 
-## M11 — Hoàn thiện (đổi số từ M6 cũ, vẫn PAUSED tới khi xong M32, M33-M34 tùy chọn)
+Các bạn vừa bổ sung 4 mốc này là nhóm tính năng CUỐI CÙNG trước khi chuyển sang vẽ lại UI/đồ họa — làm xong hết M35-M38 thì tạm dừng thêm tính năng mới, chuyển qua mảng hình ảnh.
+
+## M35 — Mua & hao Dĩa / Hộp / Bọc
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 28, phần "Mua và hao Dĩa/Hộp/Bọc"), PROGRESS.md. Làm MỐC 35
+(sửa js/data.js, js/prep.js, js/servetype.js, js/service.js):
+1. Thêm 3 "nguyên liệu" Dĩa, Hộp, Bọc vào data.js theo đúng giá vốn ở mục 28 (2.500đ / 1.500đ /
+   300đ), mua theo đúng cơ chế 1/5/10/tùy chỉnh đã có ở mục 23, hiện trong tab Nguyên liệu.
+2. Hao khi dùng: Hộp và Bọc trừ 1 khỏi tồn kho mỗi lần dùng cho 1 đơn Mang đi. Dĩa dùng bộ đếm riêng
+   `diaUsageCount` cộng dồn qua các ngày (không reset theo ngày), mỗi lần dùng cho đơn Tại quán thì
+   +1; khi bộ đếm chạm bội số của 5 thì mới trừ 1 khỏi tồn kho Dĩa.
+3. Hiện số tồn kho cả 3 món ở tab Nguyên liệu VÀ cạnh nút 🍽 Dĩa / 📦 Hộp / 🛍 Bọc ở màn Bán hàng
+   (dạng "Tên (số)" như mục 27).
+4. Hết Dĩa/Hộp/Bọc giữa chừng: áp dụng đúng cơ chế "Báo hết món" (mục 30) — khóa nút tương ứng,
+   hiện nút Báo hết món cho phép khách bỏ đi không tính sao.
+Nghiệm thu: dùng Dĩa đúng 5 lần thấy tồn kho Dĩa giảm 1; dùng Hộp/Bọc mỗi lần giảm 1 ngay; hết sạch
+Hộp mà gặp khách Mang đi thì không bấm được nút Hộp, hiện đúng nút Báo hết món.
+```
+
+## M36 — Giao trống không tính tiền, khách bỏ đi phàn nàn
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 7, trường hợp đặc biệt "giao mà không làm món nào"; mục 37),
+PROGRESS.md. Làm MỐC 36 (sửa js/scoring.js):
+Khi bấm Giao mà số món khớp với order = 0 (kể cả chưa thêm Cơm): tách hẳn khỏi bảng 1-5 sao bình
+thường. Không cộng bất kỳ khoản tiền nào (không phải 0.5× như 1-2 sao). Không cộng vào "Khách phục
+vụ", cộng vào "Khách bỏ đi". Tính 1 sao kèm 1 câu bình luận phàn nàn ở tab Đánh giá (dùng lại nhóm
+câu "bỏ đi" đã có ở mục 21). Chỉ cần ≥1 món khớp (kể cả chỉ có Cơm) thì vẫn dùng bảng sao bình
+thường như cũ, không rơi vào nhánh này.
+Nghiệm thu: chọn 1 khách, bấm Giao ngay khi đĩa/hộp hoàn toàn trống, xác nhận không nhận tiền, Tổng
+kết tăng đúng "Khách bỏ đi" (không tăng "Khách phục vụ"), tab Đánh giá có 1 sao kèm bình luận.
+```
+**Ghi chú thực tế (sau M36):** Giá Tóp mỡ (mục 40) đang dùng **7.000đ** cộng vào đơn (không còn 25.000đ). M30 Supabase đã bỏ — save chỉ localStorage. Review hiển thị giờ ảo game, không giờ máy.
+
+## M37 — Combo: Thêm / Sửa / Xóa linh hoạt
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 35), PROGRESS.md. Làm MỐC 37 (sửa js/pricing.js):
+Bỏ cách hard-code sẵn 2 combo cố định trong code. Đổi `combos` thành mảng động trong state, tối đa
+5 phần tử. Thêm nút "+ Thêm combo" (ẩn khi đã đủ 5), mỗi combo có nút "Sửa" (đổi tên/món/giá) và
+"Xóa" (xác nhận trước khi xóa). Giữ nguyên khung giá 50%-100% tổng giá lẻ đã có — tính lại khung này
+mỗi khi hiển thị/lưu combo, tự kẹp giá combo cũ về biên mới nếu giá lẻ các món thay đổi sau đó.
+Nghiệm thu: thêm được combo thứ 3, 4, 5; sửa đổi món/giá 1 combo đã có; xóa 1 combo rồi thêm lại
+combo mới vào đúng chỗ trống đó; thử đủ 5 combo thì nút "+ Thêm combo" biến mất.
+```
+
+## M38 — Fix: giá vốn biến động phải reset đúng mỗi ngày
+```
+Đọc AGENTS.md, GAME_DESIGN.md (mục 34, phần "Thứ tự bắt buộc mỗi khi sang ngày mới"), PROGRESS.md.
+Làm MỐC 38 (kiểm tra/sửa trong js/state.js, hàm xử lý sang ngày mới):
+Đảm bảo đúng thứ tự: (1) đưa toàn bộ giá vốn về giá gốc mục 3/33 trước, (2) roll xem ngày mới có
+xảy ra biến động không, (3) nếu trúng thì mới áp giá vốn mới cho đúng 1 nguyên liệu liên quan. Nếu
+code hiện tại đang làm sai thứ tự (ví dụ chỉ ghi đè khi trúng sự kiện mới mà không reset trước),
+sửa lại cho đúng.
+Nghiệm thu: chỉnh state để ngày 4 trúng "Sườn tăng giá", ngày 5 không trúng gì → xác nhận giá sườn
+ngày 5 về đúng giá gốc; thử tiếp ngày 4 "Sườn tăng giá" rồi ngày 5 trúng "Trứng được mùa" → xác
+nhận giá sườn ngày 5 cũng về gốc, chỉ giá trứng đổi.
+```
+
+---
+
+## M11 — Hoàn thiện (đổi số từ M6 cũ, vẫn PAUSED tới khi xong M38, M33-M34 tùy chọn)
 ```
 Đọc AGENTS.md, GAME_DESIGN.md, PROGRESS.md. Làm MỐC 11:
 1. Sự kiện ngẫu nhiên (mục 9), hiển thị thông báo đầu ngày.

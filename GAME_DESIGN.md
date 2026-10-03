@@ -98,6 +98,7 @@ Mỗi khách chấm 1-5 sao:
 
 - **Sao quán** = trung bình 20 đánh giá gần nhất (làm tròn 0.1). Khởi đầu 4.0 (coi như đã có 20 đánh giá 4 sao).
 - Tiền thực nhận = giá đơn × (0.5 nếu 1-2 sao, 1.0 nếu 3+ sao) + tiền boa (chỉ khi 4-5 sao).
+- **Trường hợp đặc biệt — giao mà không làm món nào (0 món khớp với order, kể cả chưa thêm cả Cơm)**: KHÔNG áp dụng bảng trên. Khách từ chối nhận, không trả bất kỳ khoản tiền nào (không phải 0.5× như 1-2 sao bình thường), KHÔNG cộng vào bộ đếm "Khách phục vụ" mà cộng vào bộ đếm "Khách bỏ đi" (cùng nhóm với hết kiên nhẫn ở mục 4), tính 1 sao kèm bình luận phàn nàn ở tab Đánh giá (mục 21, dùng lại đúng nhóm câu "bỏ đi" đã có). Ranh giới: chỉ cần có ít nhất 1 món khớp đúng với order (kể cả chỉ riêng Cơm) thì tính theo bảng bình thường ở trên, không rơi vào trường hợp đặc biệt này.
 
 ## 8. Nâng cấp (tất cả mua ở tab Chuẩn bị)
 
@@ -113,7 +114,7 @@ Mỗi khách chấm 1-5 sao:
 | Nhân viên Làm món | 350.000 | Tự lắp giúp 1 món mỗi 10s (mục 38) | 1 cấp |
 | Tủ nước giải khát | 280.000 | Mở khóa Xá xị Cô Ba, Cam ép, Sữa đậu nành (mục 33) | 1 cấp |
 
-## 9. Sự kiện ngẫu nhiên (làm ở mốc dời xuống cuối, vẫn PAUSED — chờ M11)
+## 9. Sự kiện ngẫu nhiên (làm ở **M11**, vẫn PAUSED)
 
 Mỗi ngày từ ngày 3 có 30% xảy ra 1 sự kiện (hiện thông báo lúc bắt đầu ngày):
 
@@ -323,6 +324,17 @@ Thay nút "Mua lố 10" cố định bằng chọn số lượng:
 - Nếu giao sai loại (chọn Dĩa cho khách Mang đi, chọn Hộp nhưng thiếu Bọc, hoặc chọn Hộp cho khách Tại quán) → tính như **sai/thiếu 1 món** ở mục 7 (xem thêm mục 37).
 - Không tính thêm chi phí nguyên liệu cho dĩa/hộp/bọc ở bản này — giữ đơn giản.
 
+### Mua và hao Dĩa / Hộp / Bọc (không miễn phí)
+
+- Thêm 3 "nguyên liệu" mới vào tab Nguyên liệu (cùng cơ chế mua/tồn kho ở mục 23 — chip 1/5/10/tùy chỉnh): **Dĩa**, **Hộp**, **Bọc**.
+- Giá vốn: Dĩa 2.500đ/cái, Hộp 1.500đ/cái, Bọc 300đ/cái. Không có giá bán riêng (không cộng thêm tiền vào đơn khi dùng) — đây là chi phí vận hành, không phải món bán.
+- **Hao khi dùng**:
+  - **Hộp**: hao 1 cái mỗi lần dùng cho 1 đơn Mang đi (tiêu hao hoàn toàn, không tái sử dụng).
+  - **Bọc**: hao 1 cái mỗi lần dùng cho 1 đơn Mang đi (tiêu hao hoàn toàn).
+  - **Dĩa**: tái sử dụng được — chỉ hao 1 cái sau mỗi **5 lần dùng** cho đơn Tại quán. Đếm bằng 1 bộ đếm riêng (`diaUsageCount`, cộng dồn qua các ngày, không reset theo ngày): mỗi lần dùng Dĩa cho 1 đơn thì +1 vào bộ đếm; khi bộ đếm chạm mốc chia hết cho 5 thì trừ 1 cái khỏi tồn kho Dĩa.
+- **Hiển thị tồn kho**: cả 3 món hiện số lượng còn lại ở tab Nguyên liệu (màn Chuẩn bị) VÀ cạnh nút 🍽 Dĩa / 📦 Hộp / 🛍 Bọc ở màn Bán hàng, theo đúng kiểu "Tên (số)" đã có ở mục 27.
+- **Hết Dĩa/Hộp/Bọc giữa chừng bán hàng**: áp dụng đúng cơ chế "Báo hết món" ở mục 30 — nếu khách Tại quán mà hết Dĩa, hoặc khách Mang đi mà hết Hộp hoặc hết Bọc, nút Dĩa/Hộp/Bọc tương ứng không bấm được, và nút ⚠️ Báo hết món hiện ra cho phép khách bỏ đi không tính sao, giống hệt khi hết nguyên liệu món ăn.
+
 ## 29. Nước mắm cay / không cay
 
 - Thêm 2 nguyên liệu mới vào mục 3: **Nước mắm cay** (có ớt) và **Nước mắm thường** (không ớt), giá bán +0đ (miễn phí kèm theo, giống đồ chua), giá vốn 500đ/phần mỗi loại, mua/tồn kho như nguyên liệu khác (mục 23).
@@ -362,7 +374,7 @@ Thay nút "Mua lố 10" cố định bằng chọn số lượng:
 | Mã | Tên | Giá bán | Giá vốn/phần | Mở khóa |
 |---|---|---|---|---|
 | tra | Trà đá | +5.000 | 1.000 | Có sẵn từ ngày 1 |
-| xaxi | Xá xị | +10.000 | 4.000 | Nâng cấp "Tủ nước giải khát" (mục 8) |
+| xaxi | Xá xị Cô Ba | +10.000 | 4.000 | Nâng cấp "Tủ nước giải khát" (mục 8) |
 | camep | Cam ép | +12.000 | 5.000 | Nâng cấp "Tủ nước giải khát" |
 | suadau | Sữa đậu nành | +8.000 | 3.000 | Nâng cấp "Tủ nước giải khát" |
 
@@ -377,6 +389,9 @@ Tách riêng khỏi mục 9 (sự kiện ngẫu nhiên đầy đủ, vẫn PAUSE
   - **Sườn tăng giá**: giá vốn sườn +30% chỉ trong ngày đó.
   - **Trứng được mùa**: giá vốn trứng −40% chỉ trong ngày đó.
 - Hiện thông báo ngắn ở đầu ngày (tab Quán hoặc lúc vào Chuẩn bị): ví dụ "📢 Hôm nay giá sườn nhập vào tăng 30%!".
+- **Thứ tự bắt buộc mỗi khi sang ngày mới**: (1) đưa TOÀN BỘ giá vốn về đúng giá gốc ở mục 3/33 trước, (2) sau đó mới roll xem ngày mới có xảy ra biến động hay không, (3) nếu trúng thì mới áp giá vốn mới cho đúng 1 nguyên liệu liên quan. Không được giữ lại hiệu ứng của ngày hôm trước sang ngày hôm sau dưới bất kỳ hình thức nào.
+  - Ví dụ bắt buộc đúng: ngày 4 Sườn tăng giá, ngày 5 không trúng sự kiện nào → giá sườn ngày 5 phải về lại đúng giá gốc (không còn +30%).
+  - Ví dụ bắt buộc đúng: ngày 4 Sườn tăng giá, ngày 5 trúng Trứng được mùa → giá sườn ngày 5 phải về lại đúng giá gốc (không còn +30%), chỉ có giá trứng ngày 5 giảm 40%; 2 sự kiện của 2 ngày khác nhau không bao giờ cộng dồn.
 - Không ảnh hưởng gì khác (không đổi giá bán, không đổi số khách, không đổi sao) — chỉ đổi giá vốn hiển thị và số tiền trừ khi mua ngày hôm đó.
 - **Giá gốc dùng để tính nhãn cảnh báo cũng dịch chuyển theo cùng tỉ lệ, chỉ cho món đang bị ảnh hưởng**: khi "Sườn tăng giá" xảy ra, giá gốc dùng để tính nhãn 🟢/🟡/🔴 và ngưỡng trừ sao (mục 24, 32) của riêng món Sườn được nhân thêm cùng % biến động giá vốn ngày đó (`giá gốc hiệu chỉnh = giá gốc gốc × (1 + %biến động)`). Ví dụ: Sườn tăng giá vốn +30% ngày đó → giá gốc hiệu chỉnh của Sườn cũng +30% hôm đó (người chơi tăng giá bán Sườn tương ứng để bù chi phí sẽ KHÔNG bị gắn nhãn "mắc" oan). "Trứng được mùa" (giá vốn -40%) áp dụng tương tự nhưng theo chiều giảm cho món Trứng. Các món không bị sự kiện tác động thì giá gốc giữ nguyên như mục 3.
 - Không ảnh hưởng tới `heSoGia` (hệ số khách đến ở mục 24) — hệ số đó vẫn luôn tính theo giá Cơm tấm, và sự kiện ở mục này không tác động tới Cơm tấm.
@@ -384,8 +399,11 @@ Tách riêng khỏi mục 9 (sự kiện ngẫu nhiên đầy đủ, vẫn PAUSE
 
 ## 35. Combo
 
-- Thêm khu vực "Combo" trong cùng tab Giá bán (mục 32), dưới danh sách món lẻ.
-- Người chơi tự tạo tối đa **3 combo** (Combo 1/2/3). Mỗi combo: chọn 2-4 món có sẵn (từ mục 3 và mục 33) + tự nhập 1 giá bán trọn gói. **Giá combo bị giới hạn trong khung 50%-100% tổng giá bán lẻ HIỆN TẠI** (theo giá đang áp dụng ở tab Giá bán, mục 32) của các món đã chọn — không được đặt cao hơn mua lẻ cộng lại (mất ý nghĩa combo, dễ lợi dụng để né nhãn giá mắc mà không bị phạt sao) và không được thấp hơn 50% (tránh phá giá vốn quá đà). UI tự hiện tổng giá lẻ tham khảo ngay khi chọn đủ món, kẹp giá nhập về biên nếu vượt khung — dùng đúng cơ chế nhập số + kẹp biên đã có ở mục 32, chỉ đổi khung từ "0-1.000.000" thành "50%-100% tổng giá lẻ".
+- Thêm khu vực "Combo" trong cùng tab Giá bán (mục 32), dưới danh sách món lẻ. Quản lý đầy đủ: **Thêm / Sửa / Xóa** combo, không hard-code sẵn 2-3 combo cố định trong code.
+  - Nút "+ Thêm combo" hiện khi chưa đạt giới hạn tối đa **5 combo** cùng lúc. Bấm vào tạo 1 combo mới, tự đặt tên mặc định "Combo [số thứ tự kế tiếp còn trống]" (người chơi đổi tên được, tối đa 20 ký tự).
+  - Mỗi combo đã tạo có nút "Sửa" (đổi lại danh sách món, giá, tên) và nút "Xóa" (xóa hẳn, xác nhận trước khi xóa, giải phóng chỗ cho combo khác).
+  - Dữ liệu combo lưu dạng mảng trong state (không giới hạn cứng 2 phần tử như bản cũ), chỉ giới hạn độ dài mảng tối đa 5 ở logic thêm mới.
+- Mỗi combo: chọn 2-4 món có sẵn (từ mục 3 và mục 33) + tự nhập 1 giá bán trọn gói. **Giá combo bị giới hạn trong khung 50%-100% tổng giá bán lẻ HIỆN TẠI** (theo giá đang áp dụng ở tab Giá bán, mục 32) của các món đã chọn — không được đặt cao hơn mua lẻ cộng lại (mất ý nghĩa combo, dễ lợi dụng để né nhãn giá mắc mà không bị phạt sao) và không được thấp hơn 50% (tránh phá giá vốn quá đà). UI tự hiện tổng giá lẻ tham khảo ngay khi chọn đủ món, kẹp giá nhập về biên nếu vượt khung — dùng đúng cơ chế nhập số + kẹp biên đã có ở mục 32, chỉ đổi khung từ "0-1.000.000" thành "50%-100% tổng giá lẻ". Khung này tính lại mỗi khi hiển thị/lưu combo (nếu người chơi sửa giá lẻ 1 món sau khi đã tạo combo khiến giá combo cũ rơi ra ngoài khung mới, tự kẹp lại combo đó về biên gần nhất).
 - Một combo chỉ "bật" (có thể xuất hiện trong order) khi đã chọn đủ ít nhất 2 món và đặt giá hợp lệ.
 - Khi khách xuất hiện, nếu có ít nhất 1 combo đang bật: 20% cơ hội khách order thẳng theo tên combo (order hiển thị "Combo 1" thay vì liệt kê từng món). Người chơi lắp đủ các món đã cấu hình trong combo đó rồi giao bình thường; tiền tính theo giá combo đã đặt (không cộng riêng từng món trong đó).
 - Nếu tại thời điểm đó combo không đủ điều kiện phục vụ (1 trong các món cấu thành đã hết theo luật mục 30) thì dùng đúng cơ chế "Báo hết món" ở mục 30 (không đánh giá).
@@ -407,6 +425,7 @@ Tổng hợp lại để không rơi rớt khi code — tất cả đều dùng 
 - **Sai/thiếu nước mắm theo yêu cầu** (mục 29, chỉ tính khi khách có yêu cầu rõ) → tính như "sai/thiếu 1 món" ở mục 7.
 - **Combo giao thiếu món cấu thành** (mục 35) → đếm số món thiếu trong combo đó, áp dụng đúng bảng mục 7 (thiếu 1 món = 2 sao, thiếu từ 2 món = 1 sao).
 - **Khách bỏ đi vì hết món** (mục 30) → KHÔNG tạo đánh giá, không tính vào mục 7 lẫn mục 21, có bộ đếm riêng như đã nêu ở mục 30.
+- **Giao mà không làm món nào** (0 món khớp order) → xem trường hợp đặc biệt đã thêm ở mục 7: không tính tiền, tính vào "Khách bỏ đi" (không phải hết món, không phải "khách phục vụ"), 1 sao phàn nàn.
 - Ở tab Đánh giá (mục 21), các lỗi "sai loại phục vụ" và "sai/thiếu nước mắm" xếp chung vào nhóm lý do "sai/thiếu món" đã có sẵn, dùng lại đúng bộ câu bình luận cũ — không cần soạn thêm câu mẫu riêng cho từng lỗi mới.
 
 ## 38. Nhân viên (tách "chị Hai" thành 2 vị trí độc lập)
@@ -428,6 +447,7 @@ Thay cho nâng cấp "Thuê chị Hai phụ bếp" (1 gói duy nhất) bằng **
 
 ## 39. Đồng bộ save ẩn danh lên Supabase (không tài khoản, không mật khẩu)
 
+> **Trạng thái triển khai:** Bản hiện tại **không** bật đồng bộ cloud (M30 bỏ). Mục này giữ làm đặc tả nếu bật lại sau. Save mặc định: localStorage only.
 Mục tiêu: giúp bạn (người phát triển) xem được có ai đang chơi, quán tên gì, chơi tới đâu, và có 1 bản sao lưu ngoài máy người chơi để hỗ trợ khôi phục khi cần — mà KHÔNG bắt người chơi đăng ký/đăng nhập gì cả. Đây vẫn là "lưu local trước", cloud chỉ là bản sao chạy nền.
 
 ### Kiến trúc
@@ -492,8 +512,8 @@ for each row execute function set_updated_at();
 - Kiểm tra phép AND này tại mọi thời điểm tiền có thể thay đổi (mua hàng, nhận tiền sau đơn, Tổng kết) kể từ ngày 15 trở đi. Việc bắt buộc cả 2 điều kiện đúng cùng lúc khiến "đóng cửa sớm liên tục để đẩy nhanh ngày" mà không bán được gì không còn tác dụng — vẫn phải có tiền thật trong túi đúng lúc đã qua ngày 15.
 - **Khi vừa đủ điều kiện lần đầu tiên**: KHÔNG tự động mở khóa ngay. Hiện 1 nút/thông báo nổi bật "🔓 Mở khóa Tóp mỡ" (ví dụ ở tab Quán hoặc đầu tab Chuẩn bị). Nút này giữ nguyên, không tự biến mất kể cả nếu sau đó tiền giảm xuống dưới 5 triệu — nó đại diện cho "cơ hội đã đạt được, chờ xác nhận".
 - Người chơi phải **chủ động bấm** nút đó để chính thức mở khóa (không tốn tiền, đây chỉ là bước xác nhận/ăn mừng, giống 1 cột mốc thành tựu). Sau khi bấm: `state.tomMoUnlocked = true` vĩnh viễn, Tóp mỡ trở thành nguyên liệu bình thường trong tab Nguyên liệu — nhập hàng, mua/tồn kho, bán hằng ngày y như các món khác (mục 23), không cần điều kiện gì thêm về sau.
-- **Số liệu**: giá vốn 15.000đ/phần (đắt hơn hẳn nguyên liệu khác, đúng chất "VIP"), mua/tồn kho theo cơ chế thường (mục 23). Hao qua đêm 70% nếu chưa có Tủ lạnh (cao hơn sườn/chả, vì đồ tươi cao cấp mau hư — giữ cảm giác quý hiếm, tránh mua tích trữ vô tội vạ).
-- **Cách dùng**: sau khi mở khóa, người chơi có thể **tự ý thêm** Tóp mỡ vào bất kỳ đĩa/hộp nào đang làm (không phải do khách yêu cầu, không nằm trong order gốc) — giống 1 topping tự chọn thêm để "nâng cấp món ăn", tốn 1 phần trong kho + cộng 25.000đ vào giá đơn đó. Vì không thuộc order gốc, thêm Tóp mỡ KHÔNG BAO GIỜ bị tính là "thừa món" hay bị trừ điểm — chỉ có thể cộng, không thể trừ.
+- **Số liệu**: giá vốn 15.000đ/phần, giá bán cộng thêm **7.000đ**/phần khi người chơi tự thêm vào đơn. Hao qua đêm 70% nếu chưa có Tủ lạnh.
+- **Cách dùng**: ... tốn 1 phần trong kho + cộng **7.000đ** vào giá đơn đó.
 - **Hiệu ứng "quyết định độ ngon"**: nếu đơn có Tóp mỡ và đơn đó đạt từ 3 sao trở lên theo cách chấm bình thường (mục 7, 37), cộng thêm 1 sao (tối đa 5 sao). Đồng thời tiền boa của đơn đó +10 điểm phần trăm so với mức thường (cộng dồn được với bonus khách quen ở mục 25 nếu có).
 
 ## 41. Trả lời đánh giá của khách

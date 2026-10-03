@@ -188,17 +188,130 @@
             <button type="button" class="serve-type-btn" data-serve-action="bag" id="btn-bag" disabled>🛍 Bọc</button>
           </div>
           <div class="ing-buttons" id="ing-buttons">
-            <button class="ing-btn" data-ing="com" type="button">🍚 Cơm</button>
-            <button class="ing-btn" data-ing="suon" type="button">🍖 Sườn (<span id="tray-btn-count">0</span>)</button>
-            <button class="ing-btn" data-ing="bi" type="button">🥓 Bì</button>
-            <button class="ing-btn" data-ing="trung" type="button">🍳 Trứng</button>
-            <button class="ing-btn" data-ing="tra" type="button">🧊 Trà</button>
-            <button class="ing-btn" data-ing="mam_cay" type="button">🌶️ Mắm cay</button>
-            <button class="ing-btn" data-ing="mam_thuong" type="button">🐟 Mắm thường</button>
-            <button id="btn-ing-xa-xi" class="ing-btn hidden" data-ing="xa_xi" type="button">🥤 Xá xị</button>
-            <button id="btn-ing-cam-ep" class="ing-btn hidden" data-ing="cam_ep" type="button">🍊 Cam ép</button>
-            <button id="btn-ing-sua-dau" class="ing-btn hidden" data-ing="sua_dau" type="button">🥛 Sữa đậu</button>            <button id="btn-ing-cha" class="ing-btn hidden" data-ing="cha" type="button">🥮 Chả</button>
-            <button id="btn-ing-canh" class="ing-btn hidden" data-ing="canh" type="button">🍲 Canh</button>          </div>
+          <!-- Nhóm Món chính — luôn mở -->
+          <div class="ing-group" data-group="main">
+            <button
+              type="button"
+              class="ing-group-label"
+              data-group-toggle="main"
+              aria-expanded="true"
+            >
+              Món chính
+            </button>
+
+            <div class="ing-group-body" id="ing-group-main">
+              <button class="ing-btn" data-ing="com" type="button">
+                🍚 Cơm
+              </button>
+
+              <button class="ing-btn" data-ing="suon" type="button">
+                🍖 Sườn (<span id="tray-btn-count">0</span>)
+              </button>
+
+              <button class="ing-btn" data-ing="bi" type="button">
+                🥓 Bì
+              </button>
+
+              <button class="ing-btn" data-ing="trung" type="button">
+                🍳 Trứng
+              </button>
+
+              <button
+                type="button"
+                id="btn-ing-top-mo"
+                class="ing-btn hidden"
+                data-ing="top_mo"
+              >
+                🧈 Tóp mỡ
+              </button>
+
+              <button
+                id="btn-ing-cha"
+                class="ing-btn hidden"
+                data-ing="cha"
+                type="button"
+              >
+                🥮 Chả
+              </button>
+
+              <button
+                id="btn-ing-canh"
+                class="ing-btn hidden"
+                data-ing="canh"
+                type="button"
+              >
+                🍲 Canh
+              </button>
+            </div>
+          </div>
+
+          <!-- Nhóm Nước mắm — gập mặc định -->
+          <div class="ing-group collapsed" data-group="sauce">
+            <button
+              type="button"
+              class="ing-group-label"
+              data-group-toggle="sauce"
+              aria-expanded="false"
+            >
+              Nước mắm
+            </button>
+
+            <div class="ing-group-body" id="ing-group-sauce">
+              <button class="ing-btn" data-ing="mam_cay" type="button">
+                🌶️ Mắm cay
+              </button>
+
+              <button class="ing-btn" data-ing="mam_thuong" type="button">
+                🐟 Mắm thường
+              </button>
+            </div>
+          </div>
+
+          <!-- Nhóm Nước uống — gập mặc định -->
+          <div class="ing-group collapsed" data-group="drink">
+            <button
+              type="button"
+              class="ing-group-label"
+              data-group-toggle="drink"
+              aria-expanded="false"
+            >
+              Nước uống
+            </button>
+
+            <div class="ing-group-body" id="ing-group-drink">
+              <button class="ing-btn" data-ing="tra" type="button">
+                🧊 Trà
+              </button>
+
+              <button
+                id="btn-ing-xa-xi"
+                class="ing-btn hidden"
+                data-ing="xa_xi"
+                type="button"
+              >
+                🥤 Xá xị
+              </button>
+
+              <button
+                id="btn-ing-cam-ep"
+                class="ing-btn hidden"
+                data-ing="cam_ep"
+                type="button"
+              >
+                🍊 Cam ép
+              </button>
+
+              <button
+                id="btn-ing-sua-dau"
+                class="ing-btn hidden"
+                data-ing="sua_dau"
+                type="button"
+              >
+                🥛 Sữa đậu
+              </button>
+            </div>
+          </div>
+        </div>
         </div>
 
         <div class="service-actions">

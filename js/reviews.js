@@ -68,6 +68,7 @@ export function pushReview({
   orderIds,
   missing = [],
   extra = [],
+  gameTime = '',
 }) {
   const state = getState();
   const s = Math.max(1, Math.min(5, Number(stars) || 1));
@@ -98,6 +99,8 @@ export function pushReview({
     orderText: formatOrderShort(orderIds || []),
     day: state.day || 1,
     ts: Date.now(),
+    gameTime: gameTime || '', // M36fix — giờ ảo HH:MM
+    reply: '', // M32 — câu trả lời chủ quán (chỉ hiển thị)
   };
 
   if (!Array.isArray(state.reviews)) {
@@ -114,17 +117,154 @@ export function pushReview({
   return entry;
 }
 
-function formatReviewTime(ts, day) {
-  const d = ts ? new Date(ts) : null;
-
-  if (!d || Number.isNaN(d.getTime())) {
-    return `Ngày ${day || '?'}`;
+/** M32 — lưu / xoá trả lời đánh giá (theo index trong danh sách 30 gần nhất) */
+export function setReviewReply(index, text, state = getState()) {
+  if (!Array.isArray(state.reviews)) {
+    return { success: false };
   }
 
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
+  const i = Number(index);
 
-  return `Ngày ${day || '?'} · ${hh}:${mm}`;
+  if (!Number.isInteger(i) || i < 0 || i >= state.reviews.length) {
+    return {
+      success: false,
+      error: 'Không tìm thấy đánh giá',
+    };
+  }
+
+  const raw = String(text ?? '').trim().slice(0, 150);
+
+  state.reviews[i] = {
+    ...state.reviews[i],
+    reply: raw,
+  };
+
+  saveState(state);
+
+  return { success: true };
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function ensureReplyDialog() {
+  let el = document.getElementById('review-reply-dialog');
+
+  if (el) return el;
+
+  el = document.createElement('div');
+  el.id = 'review-reply-dialog';
+  el.className = 'pause-confirm-dialog hidden';
+
+  el.innerHTML = `
+    <div class="confirm-card">
+      <p id="review-reply-title">Trả lời đánh giá</p>
+
+      <textarea
+        id="review-reply-input"
+        class="review-reply-textarea"
+        maxlength="150"
+        rows="3"
+        placeholder="Tối đa 150 ký tự..."
+      ></textarea>
+
+      <p class="discard-max-hint">
+        <span id="review-reply-count">0</span>/150
+      </p>
+
+      <div class="confirm-buttons">
+        <button
+          type="button"
+          id="review-reply-cancel"
+          class="btn-secondary"
+        >
+          Huỷ
+        </button>
+
+        <button
+          type="button"
+          id="review-reply-save"
+          class="btn-primary"
+        >
+          Lưu
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('screen-revenue')?.appendChild(el)
+    || document.body.appendChild(el);
+
+  const input = () =>
+    document.getElementById('review-reply-input');
+
+  const count = () =>
+    document.getElementById('review-reply-count');
+
+  input()?.addEventListener('input', () => {
+    const n = String(input()?.value || '').length;
+
+    if (count()) {
+      count().textContent = String(Math.min(150, n));
+    }
+  });
+
+  document
+    .getElementById('review-reply-cancel')
+    ?.addEventListener('click', () => {
+      el.classList.add('hidden');
+      el.dataset.index = '';
+    });
+
+  document
+    .getElementById('review-reply-save')
+    ?.addEventListener('click', () => {
+      const idx = Number(el.dataset.index);
+      const text = input()?.value ?? '';
+
+      const result = setReviewReply(idx, text);
+
+      if (!result.success) return;
+
+      el.classList.add('hidden');
+      el.dataset.index = '';
+
+      if (typeof window.__renderReviewsTab === 'function') {
+        window.__renderReviewsTab();
+      }
+    });
+
+  return el;
+}
+
+function openReplyDialog(index, existing = '') {
+  const el = ensureReplyDialog();
+
+  el.dataset.index = String(index);
+
+  const input =
+    document.getElementById('review-reply-input');
+
+  const count =
+    document.getElementById('review-reply-count');
+
+  if (input) {
+    input.value = String(existing || '').slice(0, 150);
+  }
+
+  if (count) {
+    count.textContent = String(
+      (input?.value || '').length
+    );
+  }
+
+  el.classList.remove('hidden');
+  input?.focus();
 }
 
 /** Render nội dung tab Đánh giá vào container */
@@ -280,6 +420,25 @@ export function renderReviewsPanel(container) {
   const listEl = container.querySelector('#reviews-list');
 
   let filter = 'all';
+
+  listEl?.addEventListener('click', (e) => {
+    const btn = e.target.closest(
+      '[data-action="open-reply"], [data-action="edit-reply"]'
+    );
+
+    if (!btn) return;
+
+    const index = Number(btn.dataset.index);
+
+    if (!Number.isInteger(index)) return;
+
+    const currentState = getState();
+    const existing =
+      currentState.reviews?.[index]?.reply || '';
+
+    openReplyDialog(index, existing);
+  });
+
   let sortMode = 'newest';
   let dayFilter = 'all';
 
@@ -324,6 +483,34 @@ export function renderReviewsPanel(container) {
         comment = comment.replaceAll('Cô Ba', shop);
         }
 
+                const reply = String(r.reply || '').trim();
+
+        const replyBlock = reply
+          ? `
+            <div class="review-reply">
+              <div class="review-reply-label">🏪 Chủ quán đã trả lời</div>
+              <p class="review-reply-text">${escapeHtml(reply)}</p>
+              <button
+                type="button"
+                class="review-reply-edit"
+                data-action="edit-reply"
+                data-index="${allReviews.indexOf(r)}"
+              >
+                Sửa
+              </button>
+            </div>
+          `
+          : `
+            <button
+              type="button"
+              class="review-reply-btn"
+              data-action="open-reply"
+              data-index="${allReviews.indexOf(r)}"
+            >
+              Trả lời
+            </button>
+          `;
+
         return `
     <div class="review-card">
         <div class="review-head">
@@ -334,19 +521,23 @@ export function renderReviewsPanel(container) {
         </span>
     </div>
 
-    <p class="review-comment">${comment}</p>
+    <p class="review-comment">${escapeHtml(comment)}</p>
 
     <div class="review-meta">
       ${
         r.orderText
-          ? `<span class="review-order">${r.orderText}</span>`
+          ? `<span class="review-order">${escapeHtml(r.orderText)}</span>`
           : ''
       }
 
-      <span class="review-time">
-        ${formatReviewTime(r.ts, r.day)}
-      </span>
+      ${
+        r.gameTime
+          ? `<span class="review-time">${escapeHtml(r.gameTime)}</span>`
+          : ''
+      }
     </div>
+
+    ${replyBlock}
   </div>`;
   })
   .join('');
@@ -382,5 +573,8 @@ export function renderReviewsPanel(container) {
       paintList();
     });
 
+      window.__renderReviewsTab = () => {
+    renderReviewsPanel(container);
+  };
   paintList();
 }
